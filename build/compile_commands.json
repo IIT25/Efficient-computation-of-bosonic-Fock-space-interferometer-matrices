@@ -1,0 +1,8 @@
+[
+{
+  "directory": "C:/Users/erdei/Documents/lkj/build",
+  "command": "C:\\GCC\\MinGW -DVERSION_INFO=\"\" -D_core_EXPORTS @CMakeFiles/_core.dir/includes_CXX.rsp -g -o CMakeFiles\\_core.dir\\src\\main.cpp.obj -c C:\\Users\\erdei\\Documents\\lkj\\scikit_build_example\\src\\main.cpp",
+  "file": "C:/Users/erdei/Documents/lkj/scikit_build_example/src/main.cpp",
+  "output": "CMakeFiles/_core.dir/src/main.cpp.obj"
+}
+]

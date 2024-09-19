@@ -1,0 +1,7 @@
+C:/Users/erdei/Documents/lkj/build/CMakeFiles/_core.dir
+C:/Users/erdei/Documents/lkj/build/CMakeFiles/edit_cache.dir
+C:/Users/erdei/Documents/lkj/build/CMakeFiles/rebuild_cache.dir
+C:/Users/erdei/Documents/lkj/build/CMakeFiles/list_install_components.dir
+C:/Users/erdei/Documents/lkj/build/CMakeFiles/install.dir
+C:/Users/erdei/Documents/lkj/build/CMakeFiles/install/local.dir
+C:/Users/erdei/Documents/lkj/build/CMakeFiles/install/strip.dir
