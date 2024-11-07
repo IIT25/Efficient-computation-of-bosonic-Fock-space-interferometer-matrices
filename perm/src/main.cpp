@@ -5,27 +5,29 @@
 #include <iostream>
 #include <numeric>
 #include <ostream>
+#include <pybind11/cast.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <vcruntime_typeinfo.h>
 #include <vector>
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
 namespace py = pybind11;
-
-std::vector<std::vector<double>> numpy_to_matrix(
-    pybind11::array_t<double, pybind11::array::c_style | py::array::forcecast>
+template <typename T>
+std::vector<std::vector<T>> numpy_to_matrix(
+    pybind11::array_t<T, pybind11::array::c_style | py::array::forcecast>
         numpy_array) {
   py::buffer_info bufferinfo = numpy_array.request();
 
   size_t rows = bufferinfo.shape[0];
   size_t cols = bufferinfo.shape[1];
-  std::vector<std::vector<double>> matrix;
-  double *data = static_cast<double *>(bufferinfo.ptr);
+  std::vector<std::vector<T>> matrix;
+  T *data = static_cast<T *>(bufferinfo.ptr);
   for (int i = 0; i < rows; i++) {
-    matrix.push_back(std::vector<double>());
+    matrix.push_back(std::vector<T>());
     for (int j = 0; j < cols; j++) {
       matrix[i].push_back(*data);
       data++;
@@ -34,11 +36,11 @@ std::vector<std::vector<double>> numpy_to_matrix(
 
   return matrix;
 }
-std::vector<std::vector<double>>
-add_to_matrix(std::vector<std::vector<double>> m) {
+template <typename T>
+std::vector<std::vector<T>> add_to_matrix(std::vector<std::vector<T>> m) {
   m.push_back(m.back());
-  double sum_of_elems;
-  for (std::vector<double> &row : m) {
+  T sum_of_elems;
+  for (std::vector<T> &row : m) {
     sum_of_elems = 0;
     for (auto &n : row)
       sum_of_elems += n;
@@ -46,11 +48,16 @@ add_to_matrix(std::vector<std::vector<double>> m) {
   }
   return m;
 }
-std::vector<std::vector<std::vector<double>>>
-calc_perm(int cutoff, pybind11::array interferometer) {
-  std::vector<std::vector<std::vector<double>>> matrices;
-  matrices.push_back({{1.0}});
-  std::vector<std::vector<double>> intfrm = numpy_to_matrix(interferometer);
+template <typename T>
+std::vector<std::vector<std::vector<T>>>
+calc_perm(int cutoff,
+          pybind11::array_t<T, pybind11::array::c_style | py::array::forcecast>
+              interferometer) {
+  std::vector<std::vector<std::vector<T>>> matrices;
+  std::vector<T> first;
+  first.push_back(T(1));
+  matrices.push_back({first});
+  std::vector<std::vector<T>> intfrm = numpy_to_matrix(interferometer);
   matrices.push_back(intfrm);
   for (int i = 1; i < cutoff; i++) {
     matrices.push_back(add_to_matrix(matrices[i]));
@@ -61,27 +68,39 @@ calc_perm(int cutoff, pybind11::array interferometer) {
 PYBIND11_MODULE(_core, m) {
 
   m.doc() = R"pbdoc(
-        Pybind11 example plugin
+        Permanent calculator
         -----------------------
 
-        .. currentmodule:: scikit_build_example
+        .. currentmodule:: perm
 
         .. autosummary::
            :toctree: _generate
 
-           add
-           subtract
+           calc_perm
     )pbdoc";
-  /*m.def("MatrixAdd", &MatrixAdd, R"pbdoc(
-        Add two numbers
+  m.def("calc_perm", &calc_perm<std::complex<double>>,
+        py::return_value_policy::take_ownership,
+        R"pbdoc(
+        Calculates the subspace representation of the matrix.
 
-        Some other explanation about the add function.
-    )pbdoc");*/
-  m.def("calc_perm", &calc_perm, R"pbdoc(
-        Add two numbers
-
-        Some other explanation about the add function.
     )pbdoc");
+  m.def("calc_perm", &calc_perm<double>,
+        py::return_value_policy::take_ownership, R"pbdoc(
+        Calculates the subspace representation of the matrix.
+
+    )pbdoc");
+
+  m.def("calc_perm", &calc_perm<float>, py::return_value_policy::take_ownership,
+        R"pbdoc(
+        Calculates the subspace representation of the matrix.
+
+    )pbdoc");
+
+  m.def("calc_perm", &calc_perm<int>, py::return_value_policy::take_ownership,
+        R"pbdoc(
+        Calculates the subspace representation of the matrix.
+
+  )pbdoc");
 #ifdef VERSION_INFO
   m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
 #else
