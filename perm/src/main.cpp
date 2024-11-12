@@ -1,3 +1,5 @@
+#include "matrix.hpp"
+
 #include <array>
 #include <cmath>
 #include <complex>
@@ -6,6 +8,7 @@
 #include <numeric>
 #include <ostream>
 #include <pybind11/cast.h>
+#include <pybind11/complex.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -17,52 +20,49 @@
 
 namespace py = pybind11;
 template <typename T>
-std::vector<std::vector<T>> numpy_to_matrix(
+Matrix<T> numpy_to_matrix(
     pybind11::array_t<T, pybind11::array::c_style | py::array::forcecast>
         numpy_array) {
   py::buffer_info bufferinfo = numpy_array.request();
 
   size_t rows = bufferinfo.shape[0];
   size_t cols = bufferinfo.shape[1];
-  std::vector<std::vector<T>> matrix;
   T *data = static_cast<T *>(bufferinfo.ptr);
-  for (int i = 0; i < rows; i++) {
-    matrix.push_back(std::vector<T>());
-    for (int j = 0; j < cols; j++) {
-      matrix[i].push_back(*data);
-      data++;
-    }
-  }
-
+  Matrix<T> matrix = Matrix<T>(rows, cols, data);
   return matrix;
 }
-template <typename T>
-std::vector<std::vector<T>> add_to_matrix(std::vector<std::vector<T>> m) {
-  m.push_back(m.back());
-  T sum_of_elems;
-  for (std::vector<T> &row : m) {
-    sum_of_elems = 0;
-    for (auto &n : row)
-      sum_of_elems += n;
-    row.push_back(sum_of_elems);
-  }
-  return m;
+template <typename T> Matrix<T> add_to_matrix(Matrix<T> m) {
+  Matrix<T> d = Matrix<T>(m);
+  return d;
+}
+template <typename T> py::array_t<T> to_pyarray(Matrix<T> m) {
+  return py::array_t<T>(py::buffer_info(m.data,
+                                        sizeof(T), // itemsize
+                                        py::format_descriptor<T>::format(),
+                                        2,                // ndim
+                                        {m.cols, m.rows}, // shape
+                                        {m.rows * sizeof(T), sizeof(T)}
+                                        // strides
+                                        ));
 }
 template <typename T>
-std::vector<std::vector<std::vector<T>>>
+std::vector<py::array_t<T>>
 calc_perm(int cutoff,
           pybind11::array_t<T, pybind11::array::c_style | py::array::forcecast>
               interferometer) {
-  std::vector<std::vector<std::vector<T>>> matrices;
-  std::vector<T> first;
-  first.push_back(T(1));
-  matrices.push_back({first});
-  std::vector<std::vector<T>> intfrm = numpy_to_matrix(interferometer);
+  std::vector<Matrix<T>> matrices;
+  std::vector<py::array_t<T>> array_ts;
+  Matrix<T> first = Matrix<T>(1, 1, new T(1));
+  matrices.push_back(first);
+  Matrix<T> intfrm = numpy_to_matrix(interferometer);
   matrices.push_back(intfrm);
   for (int i = 1; i < cutoff; i++) {
     matrices.push_back(add_to_matrix(matrices[i]));
   }
-  return matrices;
+  for (Matrix<T> m : matrices) {
+    array_ts.push_back(to_pyarray(m));
+  }
+  return array_ts;
 }
 
 PYBIND11_MODULE(_core, m) {
@@ -78,6 +78,21 @@ PYBIND11_MODULE(_core, m) {
 
            calc_perm
     )pbdoc";
+
+  py::class_<Matrix<std::complex<double>>>(m, "Matrix", py::buffer_protocol())
+      .def_buffer([](Matrix<std::complex<double>> &m) -> py::buffer_info {
+        return py::buffer_info(
+            m.data,                       /* Pointer to buffer */
+            sizeof(std::complex<double>), /* Size of one scalar */
+            py::format_descriptor<std ::complex<double>>::format(), /* Python
+                                                        struct-style format
+                                                        descriptor */
+            2,                /* Number of dimensions */
+            {m.rows, m.cols}, /* Buffer dimensions */
+            {sizeof(std::complex<double>) *
+                 m.cols, /* Strides (in bytes) for each index */
+             sizeof(std::complex<double>)});
+      });
   m.def("calc_perm", &calc_perm<std::complex<double>>,
         py::return_value_policy::take_ownership,
         R"pbdoc(
