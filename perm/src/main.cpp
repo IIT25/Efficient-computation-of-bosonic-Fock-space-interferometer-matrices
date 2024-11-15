@@ -83,10 +83,9 @@ calc_perm(int cutoff,
   Matrix<T> first = Matrix<T>(1, 1, new T(1));
   matrices.push_back(first);
   matrices.push_back(intfrm);
-  std::cout << subspace_indices_matrix.rows;
-  /*for (int i = 1; i < cutoff; i++) {
+  for (int i = 1; i < cutoff; i++) {
     matrices.push_back(add_to_matrix(matrices[i]));
-  }*/
+  }
 
   // conversion to py::array_t
   for (Matrix<T> m : matrices) {
