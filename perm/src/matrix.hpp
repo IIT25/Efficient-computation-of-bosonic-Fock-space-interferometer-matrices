@@ -80,7 +80,6 @@ public:
       delete[] data;
   }
 
-#ifdef DEBUG
   void print() {
     std::cout << std::endl << "The stored matrix:" << std::endl;
     for (size_t row_idx = 0; row_idx < rows; row_idx++) {
@@ -92,7 +91,6 @@ public:
     }
     std::cout << "------------------------" << std::endl;
   }
-#endif
 
   Tscalar &operator[](size_t idx) { return data[idx]; }
 
