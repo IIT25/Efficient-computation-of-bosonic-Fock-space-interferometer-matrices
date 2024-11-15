@@ -25,8 +25,16 @@ Matrix<T> numpy_to_matrix(
     pybind11::array_t<T, pybind11::array::c_style | py::array::forcecast>
         numpy_array) {
   py::buffer_info bufferinfo = numpy_array.request();
-  size_t rows = bufferinfo.shape[0];
-  size_t cols = bufferinfo.shape[1];
+  size_t rows;
+  size_t cols;
+  if (bufferinfo.shape.size() > 1) {
+    rows = bufferinfo.shape[0];
+    cols = bufferinfo.shape[1];
+  } else {
+    rows = 1;
+    cols = bufferinfo.shape[0];
+  }
+
   T *data = static_cast<T *>(bufferinfo.ptr);
   Matrix<T> matrix = Matrix<T>(rows, cols, data);
   matrix.print();
@@ -83,9 +91,9 @@ calc_perm(int cutoff,
   Matrix<T> first = Matrix<T>(1, 1, new T(1));
   matrices.push_back(first);
   matrices.push_back(intfrm);
-  for (int i = 1; i < cutoff; i++) {
+  /*for (int i = 1; i < cutoff; i++) {
     matrices.push_back(add_to_matrix(matrices[i]));
-  }
+  }*/
 
   // conversion to py::array_t
   for (Matrix<T> m : matrices) {
