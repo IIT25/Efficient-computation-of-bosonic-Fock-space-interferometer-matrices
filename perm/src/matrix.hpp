@@ -79,9 +79,15 @@ public:
     if (call_delete && owner)
       delete[] data;
   }
-
+  void printdim() {
+    std::cout << std::endl
+              << "The stored matrix (" << rows << " x " << cols
+              << "):" << std::endl;
+  }
   void print() {
-    std::cout << std::endl << "The stored matrix:" << std::endl;
+    std::cout << std::endl
+              << "The stored matrix (" << rows << " x " << cols
+              << "):" << std::endl;
     for (size_t row_idx = 0; row_idx < rows; row_idx++) {
       for (size_t col_idx = 0; col_idx < cols; col_idx++) {
         size_t element_idx = row_idx * stride + col_idx;
@@ -91,10 +97,29 @@ public:
     }
     std::cout << "------------------------" << std::endl;
   }
+  Matrix<Tscalar> rowidx(size_t idx) {
+    Matrix matrix_copy(1, cols);
+    if (idx >= rows) {
+      std::cout << "rowindx operator  cols:" << cols << " rows: " << rows
+                << " idx: " << idx << "\n";
+    }
+    memcpy(matrix_copy.data, data + idx * stride, cols * sizeof(Tscalar));
 
-  Tscalar &operator[](size_t idx) { return data[idx]; }
+    return matrix_copy;
+  }
+  Tscalar &operator[](size_t idx) {
+    if (idx >= size()) {
+      std::cout << "[] operator  cols:" << cols << " rows: " << rows
+                << " idx: " << idx << "\n";
+    }
+    return data[idx];
+  }
 
   Tscalar &operator()(size_t row, size_t col) {
+    if (row >= rows || col >= cols) {
+      std::cout << "() operator  cols:" << cols << " rows: " << rows
+                << " row: " << row << " col: " << col << "\n";
+    }
     return data[row * stride + col];
   }
 };
