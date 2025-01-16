@@ -60,6 +60,12 @@ Matrix<T> numpy_to_matrix1(py::tuple tuple, size_t n, T t) {
                             pybind11::array::c_style | py::array::forcecast>>();
 
   py::buffer_info bufferinfo = numpy_array.request();
+  /*std::cout << "\n";
+  for (size_t dim : bufferinfo.shape) {
+
+    std::cout << dim << "  ";
+  }
+  std::cout << "\n";*/
   size_t rows = 1;
   size_t cols;
   if (bufferinfo.shape.size() == 1) {
@@ -73,19 +79,27 @@ Matrix<T> numpy_to_matrix1(py::tuple tuple, size_t n, T t) {
   Matrix<T> matrix = Matrix<T>(rows, cols, data);
   return matrix;
 }
-
+template <typename T> py::array_t<T> to_pyarray(Matrix<T> m) {
+  return py::array_t<T>(py::buffer_info(m.data,
+                                        sizeof(T), // itemsize
+                                        py::format_descriptor<T>::format(),
+                                        2,                // ndim
+                                        {m.cols, m.rows}, // shape
+                                        {m.rows * sizeof(T), sizeof(T)}
+                                        // strides
+                                        ));
+}
 template <typename T>
-std::vector<Matrix<T>>
+std::vector<py::array_t<T>>
 calc_perm(py::array_t<T, pybind11::array::c_style | py::array::forcecast>
               interferometer,
-          py::tuple helper_indices) {
+          pybind11::tuple helper_indices) {
   // declare, init
-  py::tuple subspace_indices_array = helper_indices[0].cast<py::tuple>();
-  py::tuple first_nonzero_indices_array = helper_indices[1].cast<py::tuple>();
-  py::tuple first_subspace_indices_array = helper_indices[2].cast<py::tuple>();
-  py::tuple sqrt_occupation_numbers_array = helper_indices[3].cast<py::tuple>();
-  py::tuple sqrt_first_occupation_numbers_array =
-      helper_indices[4].cast<py::tuple>();
+  py::tuple subspace_indices_array = helper_indices[0];
+  py::tuple first_nonzero_indices_array = helper_indices[1];
+  py::tuple first_subspace_indices_array = helper_indices[2];
+  py::tuple sqrt_occupation_numbers_array = helper_indices[3];
+  py::tuple sqrt_first_occupation_numbers_array = helper_indices[4];
 
   const size_t cutoff = subspace_indices_array.size() + 2;
   std::vector<Matrix<T>> subspace_representations = std::vector<Matrix<T>>();
@@ -95,6 +109,7 @@ calc_perm(py::array_t<T, pybind11::array::c_style | py::array::forcecast>
   subspace_representations.push_back(first);
   subspace_representations.push_back(intfrm);
 
+  std::vector<py::array_t<T>> array_ts = std::vector<py::array_t<T>>();
   for (size_t n = 0; n < cutoff - 2; n++) {
     Matrix<int> subspace_indices =
         numpy_to_matrix1(subspace_indices_array, n, int(0));
@@ -119,6 +134,8 @@ calc_perm(py::array_t<T, pybind11::array::c_style | py::array::forcecast>
         T one_particle_contrib =
             intfrm(first_nonzero_indices[k], j) / denominator;
         for (size_t i = 0; i < sqrt_occupation_numbers.rows; i++) {
+          /*std::cout << subspace_indices(i, j) << "   i: " << i << " j: " << j
+                    << "  k: " << k << "  n: " << n << "\n";*/
           representation(k, i) +=
               one_particle_contrib * sqrt_occupation_numbers(i, j) *
               previous_representation_indexed[subspace_indices(i, j)];
@@ -127,7 +144,12 @@ calc_perm(py::array_t<T, pybind11::array::c_style | py::array::forcecast>
     }
     subspace_representations.push_back(representation);
   }
-  return subspace_representations;
+
+  // conversion to py::array_t
+  for (Matrix<T> m : subspace_representations) {
+    array_ts.push_back(to_pyarray(m));
+  }
+  return array_ts;
 }
 
 PYBIND11_MODULE(_core, m) {
