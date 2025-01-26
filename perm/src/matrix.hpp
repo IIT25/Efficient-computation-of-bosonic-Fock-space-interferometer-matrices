@@ -107,6 +107,21 @@ public:
 
     return matrix_copy;
   }
+
+  Matrix<Tscalar> rowslice(size_t start, size_t end) {
+    Matrix matrix_copy(end - start, cols);
+    if (end >= rows) {
+      std::cout << "rowindx operator  cols:" << cols << " rows: " << rows
+                << " end idx: " << end << std::endl;
+    }
+    matrix_copy.data = data + (start * stride);
+    matrix_copy.owner = false;
+    matrix_copy.refcount = refcount;
+
+    (*refcount)++;
+
+    return matrix_copy;
+  }
   Tscalar &operator[](size_t idx) {
     if (idx >= size()) {
       std::cout << "[] operator  cols:" << cols << " rows: " << rows

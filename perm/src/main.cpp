@@ -1,3 +1,5 @@
+#include "calc_helper.cpp"
+#include "conversions.cpp"
 #include "matrix.hpp"
 
 #include <array>
@@ -20,75 +22,6 @@
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
-namespace py = pybind11;
-template <typename T>
-Matrix<T>
-numpy_to_matrix(py::array_t<T, pybind11::array::c_style | py::array::forcecast>
-                    numpy_array) {
-  py::buffer_info bufferinfo = numpy_array.request();
-  size_t rows = bufferinfo.shape[0];
-  size_t cols = bufferinfo.shape[1];
-  T *data = static_cast<T *>(bufferinfo.ptr);
-  Matrix<T> matrix = Matrix<T>(rows, cols, data);
-  // matrix.print();
-  return matrix;
-}
-template <typename T>
-Matrix<T> numpy_to_matrix(py::tuple tuple, size_t n, T t) {
-  py::array_t<T> numpy_array =
-      tuple[n]
-          .cast<py::array_t<T,
-                            pybind11::array::c_style | py::array::forcecast>>();
-  py::buffer_info bufferinfo = numpy_array.request();
-  size_t rows = 1;
-  size_t cols;
-  if (bufferinfo.shape.size() == 1) {
-    cols = bufferinfo.shape[0];
-  } else {
-    rows = bufferinfo.shape[0];
-    cols = bufferinfo.shape[1];
-  }
-  T *data = static_cast<T *>(bufferinfo.ptr);
-  Matrix<T> matrix = Matrix<T>(rows, cols, data);
-  return matrix;
-}
-template <typename T>
-Matrix<T> numpy_to_matrix1(py::tuple tuple, size_t n, T t) {
-  py::array_t<T> numpy_array =
-      tuple[n]
-          .cast<py::array_t<T,
-                            pybind11::array::c_style | py::array::forcecast>>();
-
-  py::buffer_info bufferinfo = numpy_array.request();
-  /*std::cout << "\n";
-  for (size_t dim : bufferinfo.shape) {
-
-    std::cout << dim << "  ";
-  }
-  std::cout << "\n";*/
-  size_t rows = 1;
-  size_t cols;
-  if (bufferinfo.shape.size() == 1) {
-    cols = bufferinfo.shape[0];
-  } else {
-    rows = bufferinfo.shape[0];
-    cols = bufferinfo.shape[1];
-  }
-  T *data = static_cast<T *>(bufferinfo.ptr);
-  std::cout << *data;
-  Matrix<T> matrix = Matrix<T>(rows, cols, data);
-  return matrix;
-}
-template <typename T> py::array_t<T> to_pyarray(Matrix<T> m) {
-  return py::array_t<T>(py::buffer_info(m.data,
-                                        sizeof(T), // itemsize
-                                        py::format_descriptor<T>::format(),
-                                        2,                // ndim
-                                        {m.cols, m.rows}, // shape
-                                        {m.rows * sizeof(T), sizeof(T)}
-                                        // strides
-                                        ));
-}
 template <typename T>
 std::vector<py::array_t<T>>
 calc_perm(py::array_t<T, pybind11::array::c_style | py::array::forcecast>
@@ -134,8 +67,6 @@ calc_perm(py::array_t<T, pybind11::array::c_style | py::array::forcecast>
         T one_particle_contrib =
             intfrm(first_nonzero_indices[k], j) / denominator;
         for (size_t i = 0; i < sqrt_occupation_numbers.rows; i++) {
-          /*std::cout << subspace_indices(i, j) << "   i: " << i << " j: " << j
-                    << "  k: " << k << "  n: " << n << "\n";*/
           representation(k, i) +=
               one_particle_contrib * sqrt_occupation_numbers(i, j) *
               previous_representation_indexed[subspace_indices(i, j)];
@@ -180,6 +111,12 @@ PYBIND11_MODULE(_core, m) {
                  m.cols, /* Strides (in bytes) for each index */
              sizeof(std::complex<double>)});
       });
+  m.def("get_fock_space_basis", &get_fock_space_basis,
+        py::return_value_policy::take_ownership,
+        R"pbdoc(
+        Calculates the subspace representation of the matrix.
+
+    )pbdoc");
   m.def("calc_perm", &calc_perm<std::complex<double>>,
         py::return_value_policy::take_ownership,
         R"pbdoc(
