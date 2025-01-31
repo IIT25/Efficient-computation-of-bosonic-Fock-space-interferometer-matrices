@@ -30,11 +30,10 @@ numpy_to_matrix(py::array_t<T, pybind11::array::c_style | py::array::forcecast>
   size_t cols = bufferinfo.shape[1];
   T *data = static_cast<T *>(bufferinfo.ptr);
   Matrix<T> matrix = Matrix<T>(rows, cols, data);
-  // matrix.print();
   return matrix;
 }
 template <typename T>
-Matrix<T> numpy_to_matrix(py::tuple tuple, size_t n, T t) {
+Matrix<T> *numpy_to_matrix(py::tuple tuple, size_t n, T t) {
   py::array_t<T> numpy_array =
       tuple[n]
           .cast<py::array_t<T,
@@ -49,36 +48,10 @@ Matrix<T> numpy_to_matrix(py::tuple tuple, size_t n, T t) {
     cols = bufferinfo.shape[1];
   }
   T *data = static_cast<T *>(bufferinfo.ptr);
-  Matrix<T> matrix = Matrix<T>(rows, cols, data);
+  Matrix<T> *matrix = new Matrix<T>(rows, cols, data);
   return matrix;
 }
-template <typename T>
-Matrix<T> numpy_to_matrix1(py::tuple tuple, size_t n, T t) {
-  py::array_t<T> numpy_array =
-      tuple[n]
-          .cast<py::array_t<T,
-                            pybind11::array::c_style | py::array::forcecast>>();
 
-  py::buffer_info bufferinfo = numpy_array.request();
-  /*std::cout << "\n";
-  for (size_t dim : bufferinfo.shape) {
-
-    std::cout << dim << "  ";
-  }
-  std::cout << "\n";*/
-  size_t rows = 1;
-  size_t cols;
-  if (bufferinfo.shape.size() == 1) {
-    cols = bufferinfo.shape[0];
-  } else {
-    rows = bufferinfo.shape[0];
-    cols = bufferinfo.shape[1];
-  }
-  T *data = static_cast<T *>(bufferinfo.ptr);
-  std::cout << *data;
-  Matrix<T> matrix = Matrix<T>(rows, cols, data);
-  return matrix;
-}
 template <typename T> py::array_t<T> to_pyarray(Matrix<T> m) {
   return py::array_t<T>(py::buffer_info(m.data,
                                         sizeof(T), // itemsize
@@ -112,15 +85,15 @@ calc_perm(py::array_t<T, pybind11::array::c_style | py::array::forcecast>
   std::vector<py::array_t<T>> array_ts = std::vector<py::array_t<T>>();
   for (size_t n = 0; n < cutoff - 2; n++) {
     Matrix<int> subspace_indices =
-        numpy_to_matrix1(subspace_indices_array, n, int(0));
+        *numpy_to_matrix(subspace_indices_array, n, int(0));
     Matrix<int> first_subspace_indices =
-        numpy_to_matrix(first_subspace_indices_array, n, int(0));
+        *numpy_to_matrix(first_subspace_indices_array, n, int(0));
     Matrix<int> first_nonzero_indices =
-        numpy_to_matrix(first_nonzero_indices_array, n, int(0));
+        *numpy_to_matrix(first_nonzero_indices_array, n, int(0));
     Matrix<double> sqrt_occupation_numbers =
-        numpy_to_matrix(sqrt_occupation_numbers_array, n, double(0));
+        *numpy_to_matrix(sqrt_occupation_numbers_array, n, double(0));
     Matrix<double> sqrt_first_occupation_numbers =
-        numpy_to_matrix(sqrt_first_occupation_numbers_array, n, double(0));
+        *numpy_to_matrix(sqrt_first_occupation_numbers_array, n, double(0));
 
     Matrix<T> previous_representation = subspace_representations[n + 1];
     Matrix<T> representation =
