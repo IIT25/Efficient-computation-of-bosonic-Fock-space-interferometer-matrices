@@ -1,6 +1,7 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
+#include <cmath>
 #include <cstddef>
 #include <cstring>
 
@@ -97,8 +98,8 @@ public:
     }
     std::cout << "------------------------" << std::endl;
   }
-  Matrix<Tscalar> rowidx(size_t idx) {
-    Matrix matrix_copy(1, cols);
+  Matrix<Tscalar> rowidx(size_t idx) { //
+    Matrix<Tscalar> matrix_copy(1, cols);
     if (idx >= rows) {
       std::cout << "rowindx operator  cols:" << cols << " rows: " << rows
                 << " idx: " << idx << "\n";
@@ -107,35 +108,93 @@ public:
 
     return matrix_copy;
   }
-
-  Matrix<Tscalar> rowslice(size_t start, size_t end) {
-    Matrix matrix_copy(end - start, cols);
-    if (end >= rows) {
-      std::cout << "rowindx operator  cols:" << cols << " rows: " << rows
-                << " end idx: " << end << std::endl;
+  Matrix<Tscalar> &rowidxR(size_t idx) { //
+    Matrix<Tscalar> matrix_copy(1, cols, data + idx * stride);
+    if (idx >= rows) {
+      std::cout << "rowindxR operator  cols:" << cols << " rows: " << rows
+                << " idx: " << idx << "\n";
     }
-    matrix_copy.data = data + (start * stride);
-    matrix_copy.owner = false;
-    matrix_copy.refcount = refcount;
 
-    (*refcount)++;
+    return matrix_copy;
+  }
+
+  Matrix<Tscalar> rowsliceR(size_t start, size_t end) {
+    Matrix matrix_copy(end - start, cols, data + (start * stride));
+    /*if (end >= rows) {
+      std::cout << "rowsliceR operator  cols:" << cols << " rows: " << rows
+                << " end idx: " << end << std::endl;
+    }*/
 
     return matrix_copy;
   }
   Tscalar &operator[](size_t idx) {
-    if (idx >= size()) {
+    /*if (idx >= size()) {
       std::cout << "[] operator  cols:" << cols << " rows: " << rows
                 << " idx: " << idx << "\n";
-    }
+    }*/
     return data[idx];
+  }
+  Matrix *operator[](Matrix<int> idx) {
+    Matrix *r;
+    if (rows == 1) {
+      r = new Matrix(1, idx.cols);
+      for (size_t j = 0; j < idx.cols; j++) {
+        *((*r).data + j) = *(data + idx[j]);
+      }
+    } else {
+      r = new Matrix(idx.cols, cols);
+      for (size_t i = 0; i < idx.cols; i++) {
+        for (size_t j = 0; j < cols; j++) {
+          *((*r).data + j + i * stride) = *(data + j + idx[i] * stride);
+        }
+      }
+    }
+
+    return r;
   }
 
   Tscalar &operator()(size_t row, size_t col) {
-    if (row >= rows || col >= cols) {
+    /*if (row >= rows || col >= cols) {
       std::cout << "() operator  cols:" << cols << " rows: " << rows
                 << " row: " << row << " col: " << col << "\n";
-    }
+    }*/
     return data[row * stride + col];
+  }
+  void iota(Tscalar start) {
+    if (data == nullptr) {
+      std::cout << "Nullpointer for data" << std::endl;
+      return;
+    }
+    for (size_t i = 0; i < rows; i++) {
+      for (size_t j = 0; j < cols; j++) {
+        *(data + j + i * stride) = start + j + i * stride;
+      }
+    }
+  }
+  void sqrt(Matrix<double> out) {
+    for (size_t i = 0; i < rows; i++) {
+      for (size_t j = 0; j < cols; j++) {
+        *(out.data + j + i * stride) = std::sqrt(*(data + j + i * stride));
+      }
+    }
+  }
+  Matrix<int> mod(Matrix<int> divisor) {
+    Matrix<int> r = Matrix<int>(rows, cols);
+    for (size_t i = 0; i < rows; i++) {
+      for (size_t j = 0; j < cols; j++) {
+        *(r.data + j + i * stride) = (*(data + j + i * stride)) % divisor(i, j);
+      }
+    }
+    return r;
+  }
+  Matrix<int> mod(int divisor) {
+    Matrix<int> r = Matrix<int>(rows, cols);
+    for (size_t i = 0; i < rows; i++) {
+      for (size_t j = 0; j < cols; j++) {
+        *(r.data + j + i * stride) = (*(data + j + i * stride)) % divisor;
+      }
+    }
+    return r;
   }
 };
 

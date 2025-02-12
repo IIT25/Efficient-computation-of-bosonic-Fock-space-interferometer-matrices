@@ -21,72 +21,10 @@
 #include <vcruntime_typeinfo.h>
 #include <vector>
 
-auto calculate_interferometer_helper_indices(int d, int cutoff) {
-  // space = nb_get_fock_space_basis(d=d, cutoff=cutoff);
-}
-/*def calculate_interferometer_helper_indices(d, cutoff):
-    space = nb_get_fock_space_basis(d=d, cutoff=cutoff)
-
-    basis = np.empty((space.shape[0], d), dtype=space.dtype)
-    first_subpace_indices_space = np.empty(shape=space.shape[0],
-   dtype=space.dtype) sqrt_first_occupation_numbers = np.empty(len(space),
-   dtype=np.float64)
-
-    first_nonzero_space_index = np.empty(shape=space.shape[0],
-   dtype=space.dtype)
-
-    sqrt_space = np.empty(shape=space.shape, dtype=np.float64)
-
-    for i in range(len(space)):
-        current_basis = space[i]
-        sqrt_space[i] = np.sqrt(current_basis)
-        found_first = False
-        for j in range(d):
-            current_basis[j] -= 1
-            basis[i, j] = get_index_in_fock_subspace(current_basis)
-
-            if not found_first and current_basis[j] >= 0:
-                first_nonzero_space_index[i] = j
-                first_subpace_indices_space[i] = basis[i, j]
-                found_first = True
-                sqrt_first_occupation_numbers[i] = sqrt_space[i, j]
-
-            current_basis[j] += 1
-
-    subspace_index_tensor = []
-
-    first_subspace_index_tensor = []
-    first_nonzero_index_tensor = []
-
-    sqrt_occupation_numbers_tensor = []
-    sqrt_first_occupation_numbers_tensor = []
-
-    indices = cutoff_fock_space_dim_array(cutoff=np.arange(1, cutoff + 1), d=d)
-
-    for n in range(2, cutoff):
-        subspace_range = np.arange(indices[n - 1], indices[n])
-        subspace_index_tensor.append(
-            np.mod(basis[subspace_range], indices[n - 1] - indices[n - 2])
-        )
-
-        first_nonzero_index_tensor.append(first_nonzero_space_index[subspace_range])
-        first_subspace_index_tensor.append(first_subpace_indices_space[subspace_range])
-
-        sqrt_occupation_numbers_tensor.append(sqrt_space[subspace_range])
-        sqrt_first_occupation_numbers_tensor.append(
-            sqrt_first_occupation_numbers[subspace_range]
-        )
-
-    return (
-        subspace_index_tensor,
-        first_nonzero_index_tensor,
-        first_subspace_index_tensor,
-        sqrt_occupation_numbers_tensor,
-        sqrt_first_occupation_numbers_tensor,
-    )
-*/
-
 int binomialCoeff(int n, int k) {
+  if (n < 0) {
+    return 0;
+  }
   if (k == 0) {
     return 1;
   }
@@ -117,6 +55,7 @@ Matrix<int> partitions(int boxes, int particles,
   std::vector<int> separators(boxes - 1);
   std::iota(std::begin(separators), std::end(separators), 0);
   int index = size - 1;
+
   while (true) {
     int prev = -1;
     for (size_t i = 0; i < boxes - 1; i++) {
@@ -142,33 +81,101 @@ Matrix<int> partitions(int boxes, int particles,
   return result;
 }
 
-/*def nb_get_fock_space_basis(d: int, cutoff: int) -> np.ndarray:
-    size = cutoff_fock_space_dim(cutoff=cutoff, d=d)
-
-    ret = np.empty((size, d), dtype=np.int32)
-    current_row = 0
-    for n in range(cutoff):
-        num_rows = symmetric_subspace_cardinality(d, n)
-        out = ret[current_row : current_row + num_rows, :]
-        _ = partitions(boxes=d, particles=n, out=out)
-        current_row += num_rows
-
-    return ret
-*/
-pybind11::array_t<int> get_fock_space_basis(int d, int cutoff) {
+Matrix<int> get_fock_space_basis(int d, int cutoff) {
   int size = cutoff_fock_space_dim(cutoff, d);
 
   Matrix<int> ret = Matrix<int>(size, d);
-  ret.printdim();
   int current_row = 0;
   for (size_t n = 0; n < cutoff; n++) {
     int num_rows = symmetric_subspace_cardinality(d, n);
-    Matrix<int> out = ret.rowslice(current_row, current_row + num_rows);
+    Matrix<int> out = ret.rowsliceR(current_row, current_row + num_rows);
     partitions(d, n, out);
-    out.print();
     current_row += num_rows;
   }
-  return to_pyarray(ret);
+  return ret;
+}
+
+int get_index_in_fock_subspace(Matrix<int> element) {
+
+  int sum_ = 0;
+  int accumulator = 0;
+  for (size_t i = 0; i < element.cols - 1; i++) {
+    sum_ += element[element.cols - i - 1];
+    accumulator += binomialCoeff(sum_ + i, i + 1);
+  }
+  return accumulator;
+}
+
+Matrix<int> cutoff_fock_space_dim_array(Matrix<int> cutoff, int d) {
+  Matrix<int> ret = Matrix<int>(cutoff.rows, cutoff.cols);
+  for (size_t i = 0; i < cutoff.cols; i++) {
+    ret[i] = binomialCoeff(d + cutoff[i] - 1, d);
+  }
+  return ret;
+}
+
+std::tuple<std::vector<Matrix<int>>, std::vector<Matrix<int>>,
+           std::vector<Matrix<int>>, std::vector<Matrix<double>>,
+           std::vector<Matrix<double>>>
+calculate_interferometer_helper_indices(int d, int cutoff) {
+  Matrix<int> space = get_fock_space_basis(d = d, cutoff = cutoff);
+  Matrix<int> basis = Matrix<int>(space.rows, d);
+  Matrix<int> first_subpace_indices_space = Matrix<int>(1, space.rows);
+  Matrix<double> sqrt_first_occupation_numbers = Matrix<double>(1, space.rows);
+  Matrix<int> first_nonzero_space_index = Matrix<int>(1, space.rows);
+  Matrix<double> sqrt_space = Matrix<double>(space.rows, space.cols);
+
+  for (size_t i = 0; i < space.rows; i++) {
+    Matrix<int> current_basis = space.rowidx(i);
+    current_basis.sqrt(sqrt_space.rowidxR(i));
+    bool found_first = false;
+    for (size_t j = 0; j < d; j++) {
+      current_basis[j] -= 1;
+      basis(i, j) = get_index_in_fock_subspace(current_basis);
+      if (!found_first && current_basis[j] >= 0) {
+        first_nonzero_space_index[i] = j;
+        first_subpace_indices_space[i] = basis(i, j);
+        found_first = true;
+        sqrt_first_occupation_numbers[i] = sqrt_space(i, j);
+      }
+      current_basis[j] += 1;
+    }
+  }
+  sqrt_space.print();
+
+  Matrix<int> cutoffM = Matrix<int>(1, cutoff);
+  cutoffM.iota(1);
+  std::vector<Matrix<int>> subspace_index_tensor = std::vector<Matrix<int>>();
+  std::vector<Matrix<int>> first_subspace_index_tensor =
+      std::vector<Matrix<int>>();
+  std::vector<Matrix<int>> first_nonzero_index_tensor =
+      std::vector<Matrix<int>>();
+  std::vector<Matrix<double>> sqrt_occupation_numbers_tensor =
+      std::vector<Matrix<double>>();
+  std::vector<Matrix<double>> sqrt_first_occupation_numbers_tensor =
+      std::vector<Matrix<double>>();
+  Matrix<int> indices = cutoff_fock_space_dim_array(cutoffM, d);
+  for (size_t n = 2; n < cutoff; n++) {
+    Matrix<int> subspace_range = Matrix<int>(1, indices[n] - indices[n - 1]);
+    subspace_range.iota(indices[n - 1]);
+    subspace_index_tensor.push_back(
+        (*basis[subspace_range]).mod(indices[n - 1] - indices[n - 2]));
+
+    first_nonzero_index_tensor.push_back(
+        (*first_nonzero_space_index[subspace_range]));
+    first_subspace_index_tensor.push_back(
+        (*first_subpace_indices_space[subspace_range]));
+
+    sqrt_occupation_numbers_tensor.push_back((*sqrt_space[subspace_range]));
+    sqrt_first_occupation_numbers_tensor.push_back(
+        (*sqrt_first_occupation_numbers[subspace_range]));
+  }
+  sqrt_occupation_numbers_tensor[0].print();
+  sqrt_first_occupation_numbers_tensor[0].print();
+  return std::make_tuple(subspace_index_tensor, first_nonzero_index_tensor,
+                         first_subspace_index_tensor,
+                         sqrt_occupation_numbers_tensor,
+                         sqrt_first_occupation_numbers_tensor);
 }
 
 #endif

@@ -11,6 +11,7 @@
 #include <ostream>
 #include <pybind11/cast.h>
 #include <pybind11/complex.h>
+#include <pybind11/detail/common.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
@@ -22,50 +23,53 @@
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
-template <typename T>
-std::vector<py::array_t<T>>
-calc_perm(py::array_t<T, pybind11::array::c_style | py::array::forcecast>
-              interferometer,
-          pybind11::tuple helper_indices) {
+std::vector<py::array_t<std::complex<double>>>
+calc_perm(Matrix<std::complex<double>> interferometer,
+          std::tuple<std::vector<Matrix<int>>, std::vector<Matrix<int>>,
+                     std::vector<Matrix<int>>, std::vector<Matrix<double>>,
+                     std::vector<Matrix<double>>>
+              helper_indices) {
   // declare, init
-  py::tuple subspace_indices_array = helper_indices[0];
-  py::tuple first_nonzero_indices_array = helper_indices[1];
-  py::tuple first_subspace_indices_array = helper_indices[2];
-  py::tuple sqrt_occupation_numbers_array = helper_indices[3];
-  py::tuple sqrt_first_occupation_numbers_array = helper_indices[4];
+  std::vector<Matrix<int>> subspace_indices_array = std::get<0>(helper_indices);
+  std::vector<Matrix<int>> first_nonzero_indices_array =
+      std::get<1>(helper_indices);
+  std::vector<Matrix<int>> first_subspace_indices_array =
+      std::get<2>(helper_indices);
+  std::vector<Matrix<double>> sqrt_occupation_numbers_array =
+      std::get<3>(helper_indices);
+  std::vector<Matrix<double>> sqrt_first_occupation_numbers_array =
+      std::get<4>(helper_indices);
 
   const size_t cutoff = subspace_indices_array.size() + 2;
-  std::vector<Matrix<T>> subspace_representations = std::vector<Matrix<T>>();
-  // std::cout << cutoff << "\n";
-  Matrix<T> first = Matrix<T>(1, 1, new T(1));
-  Matrix<T> intfrm = numpy_to_matrix(interferometer);
+  std::vector<Matrix<std::complex<double>>> subspace_representations =
+      std::vector<Matrix<std::complex<double>>>();
+  Matrix<std::complex<double>> first =
+      Matrix<std::complex<double>>(1, 1, new std::complex<double>(1));
   subspace_representations.push_back(first);
-  subspace_representations.push_back(intfrm);
+  subspace_representations.push_back(interferometer);
 
-  std::vector<py::array_t<T>> array_ts = std::vector<py::array_t<T>>();
+  std::vector<py::array_t<std::complex<double>>> array_ts =
+      std::vector<py::array_t<std::complex<double>>>();
   for (size_t n = 0; n < cutoff - 2; n++) {
-    Matrix<int> subspace_indices =
-        numpy_to_matrix1(subspace_indices_array, n, int(0));
-    Matrix<int> first_subspace_indices =
-        numpy_to_matrix(first_subspace_indices_array, n, int(0));
-    Matrix<int> first_nonzero_indices =
-        numpy_to_matrix(first_nonzero_indices_array, n, int(0));
-    Matrix<double> sqrt_occupation_numbers =
-        numpy_to_matrix(sqrt_occupation_numbers_array, n, double(0));
+    Matrix<int> subspace_indices = subspace_indices_array[n];
+    Matrix<int> first_subspace_indices = first_subspace_indices_array[n];
+    Matrix<int> first_nonzero_indices = first_nonzero_indices_array[n];
+    Matrix<double> sqrt_occupation_numbers = sqrt_occupation_numbers_array[n];
     Matrix<double> sqrt_first_occupation_numbers =
-        numpy_to_matrix(sqrt_first_occupation_numbers_array, n, double(0));
+        sqrt_first_occupation_numbers_array[n];
 
-    Matrix<T> previous_representation = subspace_representations[n + 1];
-    Matrix<T> representation =
-        Matrix<T>(first_nonzero_indices.cols, sqrt_occupation_numbers.rows);
+    Matrix<std::complex<double>> previous_representation =
+        subspace_representations[n + 1];
+    Matrix<std::complex<double>> representation = Matrix<std::complex<double>>(
+        first_nonzero_indices.cols, sqrt_occupation_numbers.rows);
 
     for (size_t k = 0; k < first_nonzero_indices.cols; k++) {
-      T denominator = sqrt_first_occupation_numbers[k];
-      Matrix<T> previous_representation_indexed =
+      std::complex<double> denominator = sqrt_first_occupation_numbers[k];
+      Matrix<std::complex<double>> previous_representation_indexed =
           previous_representation.rowidx(first_subspace_indices[k]);
       for (size_t j = 0; j < sqrt_occupation_numbers.cols; j++) {
-        T one_particle_contrib =
-            intfrm(first_nonzero_indices[k], j) / denominator;
+        std::complex<double> one_particle_contrib =
+            interferometer(first_nonzero_indices[k], j) / denominator;
         for (size_t i = 0; i < sqrt_occupation_numbers.rows; i++) {
           representation(k, i) +=
               one_particle_contrib * sqrt_occupation_numbers(i, j) *
@@ -77,10 +81,21 @@ calc_perm(py::array_t<T, pybind11::array::c_style | py::array::forcecast>
   }
 
   // conversion to py::array_t
-  for (Matrix<T> m : subspace_representations) {
+  for (Matrix<std::complex<double>> m : subspace_representations) {
     array_ts.push_back(to_pyarray(m));
   }
   return array_ts;
+}
+
+std::vector<py::array_t<std::complex<double>>>
+_get_interferometer_on_fock_space(
+    py::array_t<std::complex<double>,
+                pybind11::array::c_style | py::array::forcecast>
+        interferometer,
+    int cutoff) {
+  Matrix<std::complex<double>> interf = numpy_to_matrix(interferometer);
+  return calc_perm(
+      interf, calculate_interferometer_helper_indices(interf.rows, cutoff));
 }
 
 PYBIND11_MODULE(_core, m) {
@@ -117,30 +132,14 @@ PYBIND11_MODULE(_core, m) {
         Calculates the subspace representation of the matrix.
 
     )pbdoc");
-  m.def("calc_perm", &calc_perm<std::complex<double>>,
-        py::return_value_policy::take_ownership,
+  m.def("_get_interferometer_on_fock_space", //
+        &_get_interferometer_on_fock_space,
+        py::return_value_policy::take_ownership);
+  m.def("calc_perm", &calc_perm, py::return_value_policy::take_ownership,
         R"pbdoc(
         Calculates the subspace representation of the matrix.
 
     )pbdoc");
-  m.def("calc_perm", &calc_perm<double>,
-        py::return_value_policy::take_ownership,
-        R"pbdoc(
-        Calculates the subspace representation of the matrix.
-
-    )pbdoc");
-
-  m.def("calc_perm", &calc_perm<float>, py::return_value_policy::take_ownership,
-        R"pbdoc(
-        Calculates the subspace representation of the matrix.
-
-    )pbdoc");
-
-  m.def("calc_perm", &calc_perm<int>, py::return_value_policy::take_ownership,
-        R"pbdoc(
-        Calculates the subspace representation of the matrix.
-
-  )pbdoc");
 #ifdef VERSION_INFO
   m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
 #else
