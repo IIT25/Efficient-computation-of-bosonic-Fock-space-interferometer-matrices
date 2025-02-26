@@ -29,7 +29,6 @@ numpy_to_matrix(py::array_t<T, pybind11::array::c_style | py::array::forcecast>
   size_t cols = bufferinfo.shape[1];
   T *data = static_cast<T *>(bufferinfo.ptr);
   Matrix<T> matrix = Matrix<T>(rows, cols, data);
-  // matrix.print();
   return matrix;
 }
 template <typename T>
@@ -51,26 +50,7 @@ Matrix<T> numpy_to_matrix(py::tuple tuple, size_t n, T t) {
   Matrix<T> matrix = Matrix<T>(rows, cols, data);
   return matrix;
 }
-template <typename T>
-Matrix<T> numpy_to_matrix1(py::tuple tuple, size_t n, T t) {
-  py::array_t<T> numpy_array =
-      tuple[n]
-          .cast<py::array_t<T,
-                            pybind11::array::c_style | py::array::forcecast>>();
 
-  py::buffer_info bufferinfo = numpy_array.request();
-  size_t rows = 1;
-  size_t cols;
-  if (bufferinfo.shape.size() == 1) {
-    cols = bufferinfo.shape[0];
-  } else {
-    rows = bufferinfo.shape[0];
-    cols = bufferinfo.shape[1];
-  }
-  T *data = static_cast<T *>(bufferinfo.ptr);
-  Matrix<T> matrix = Matrix<T>(rows, cols, data);
-  return matrix;
-}
 template <typename T> py::array_t<T> to_pyarray(Matrix<T> m) {
   return py::array_t<T>(py::buffer_info(m.data,
                                         sizeof(T), // itemsize

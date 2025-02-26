@@ -154,10 +154,7 @@ public:
   }
 
   Tscalar &operator()(size_t row, size_t col) {
-    /*if (row >= rows || col >= cols) {
-      std::cout << "() operator  cols:" << cols << " rows: " << rows
-                << " row: " << row << " col: " << col << "\n";
-    }*/
+
     return data[row * stride + col];
   }
   void iota(Tscalar start) {
@@ -195,6 +192,13 @@ public:
       }
     }
     return r;
+  }
+
+  Matrix<Tscalar> horizontal_concat(Matrix<Tscalar> m) {
+    Matrix<Tscalar> res = Matrix<Tscalar>(1, m.size() + (this->size()));
+    memcpy(res.data, this->data, this->size() * sizeof(Tscalar));
+    memcpy(res.data + this->size(), m.data, m.size() * sizeof(Tscalar));
+    return res;
   }
 };
 

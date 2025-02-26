@@ -141,7 +141,6 @@ calculate_interferometer_helper_indices(int d, int cutoff) {
       current_basis[j] += 1;
     }
   }
-  sqrt_space.print();
 
   Matrix<int> cutoffM = Matrix<int>(1, cutoff);
   cutoffM.iota(1);
@@ -170,8 +169,6 @@ calculate_interferometer_helper_indices(int d, int cutoff) {
     sqrt_first_occupation_numbers_tensor.push_back(
         (*sqrt_first_occupation_numbers[subspace_range]));
   }
-  sqrt_occupation_numbers_tensor[0].print();
-  sqrt_first_occupation_numbers_tensor[0].print();
   return std::make_tuple(subspace_index_tensor, first_nonzero_index_tensor,
                          first_subspace_index_tensor,
                          sqrt_occupation_numbers_tensor,
