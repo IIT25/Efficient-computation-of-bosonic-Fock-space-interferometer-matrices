@@ -1,4 +1,5 @@
 import jax
+import math
 from functools import partial
 import numpy as np
 import perm
@@ -12,21 +13,31 @@ jax.ffi.register_ffi_target("_get_interferometer_on_fock_space_bwd", perm._get_i
 for name, target in perm.registrations().items():
     jax.ffi.register_ffi_target(name, target)
 
-def total_size(interferometer):
-   return 26
+def total_size(interferometer, cutoff):
+   d = len(interferometer)
+   sum = 1 + pow(d,2)
+   for i in range(2, cutoff):
+      sum += pow(math.comb(d + i - 1 , i), 2)
+   return sum
 
 @partial(jax.custom_vjp)
 def _get_interferometer_on_fock_space_xla( cutoff, interferometer):
-  '''if cutoff.dtype != jnp.int:
-    raise ValueError("Only the float32 dtype is implemented by rms_norm")
-    '''
+
   call = jax.ffi.ffi_call(
     "_get_interferometer_on_fock_space_xla",
-    jax.ShapeDtypeStruct([1, total_size(interferometer)], interferometer.dtype),
+    (
+    jax.ShapeDtypeStruct([total_size(interferometer, cutoff[0])], interferometer.dtype),
+    jax.ShapeDtypeStruct([cutoff[0]], np.uint64)),
     vmap_method="broadcast_all",
   )
-  res = call(cutoff, interferometer)
-  return res
+  res, dims = call(cutoff, interferometer)
+  sliced_res = []
+  start_idx = 0
+  for d in dims:
+     sliced_res.append(np.array(res[start_idx:(start_idx+d*d)]).reshape(d,d))
+     start_idx += d*d
+  print(sliced_res)
+  return sliced_res
 
 def _get_interferometer_on_fock_space_fwd( cutoff, intf):
   pass
@@ -76,5 +87,5 @@ def interferometer():
             ],
         ], dtype=np.complex128
     )
-cutoff = np.array([2], dtype=np.uint64)
+cutoff = np.array([4], dtype=np.uint64)
 print(_get_interferometer_on_fock_space_xla(cutoff, interferometer()))

@@ -39,10 +39,9 @@ std::pair<int64_t, int64_t> GetDims(const ffi::Buffer<T> &buffer) {
   return std::make_pair(buffer.element_count(), dims.back());
 }
 
-ffi::Error
-_get_interferometer_on_fock_space_Impl(ffi ::Buffer<ffi::U64> cutoff,
-                                       ffi::Buffer<ffi::C128> interferometer,
-                                       ffi::ResultBuffer<ffi::C128> y) {
+ffi::Error _get_interferometer_on_fock_space_Impl(
+    ffi ::Buffer<ffi::U64> cutoff, ffi::Buffer<ffi::C128> interferometer,
+    ffi::ResultBuffer<ffi::C128> y, ffi::ResultBuffer<ffi::U64> y_dims) {
   auto [totalSize, lastDim] = GetDims(interferometer);
   Matrix<std::complex<double>> interferometerc = Matrix<std::complex<double>>(
       totalSize / lastDim, lastDim, &(interferometer.typed_data()[0]));
@@ -54,13 +53,9 @@ _get_interferometer_on_fock_space_Impl(ffi ::Buffer<ffi::U64> cutoff,
   for (size_t i = 0; i < res.size(); i++) {
     y->typed_data()[i] = res[i];
   }
-  /*for (int i = res.size(); i < cutoff.typed_data()[0] + res.size(); i++) {
-    y->typed_data()[i] = dims[i];
-  }*/
-  /*for (size_t i = 0; i < res.size() + cutoff.typed_data()[0]; i++) {
-    std::cout << y->typed_data()[i] << std::endl;
-  }*/
-  std::cout << "reeee" << std::endl;
+  for (int i = 0; i < cutoff.typed_data()[0]; i++) {
+    y_dims->typed_data()[i] = dims[i];
+  }
   return ffi::Error::Success();
 }
 
@@ -69,7 +64,8 @@ XLA_FFI_DEFINE_HANDLER_SYMBOL(_get_interferometer_on_fock_space_xla,
                               ffi::Ffi::Bind()
                                   .Arg<ffi::Buffer<ffi::U64>>()
                                   .Arg<ffi::Buffer<ffi::C128>>()
-                                  .Ret<ffi::Buffer<ffi::C128>>());
+                                  .Ret<ffi::Buffer<ffi::C128>>()
+                                  .Ret<ffi::Buffer<ffi::U64>>());
 ffi::Error _get_interferometer_on_fock_space_fwd_impl(
     ffi::Buffer<ffi::U64> cutoff, ffi::Buffer<ffi::C128> interferometer,
     ffi::ResultBuffer<ffi::C128> y, ffi::ResultBuffer<ffi::C128> result) {
