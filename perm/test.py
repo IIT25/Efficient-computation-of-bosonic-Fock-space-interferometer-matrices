@@ -6,10 +6,6 @@ import perm
 import jax.numpy as jnp
 
 jax.config.update("jax_enable_x64", True)
-'''jax.ffi.register_ffi_target("_get_interferometer_on_fock_space_xla", perm._get_interferometer_on_fock_space_xla)
-jax.ffi.register_ffi_target("_get_interferometer_on_fock_space_fwd", perm._get_interferometer_on_fock_space_fwd)
-jax.ffi.register_ffi_target("_get_interferometer_on_fock_space_bwd", perm._get_interferometer_on_fock_space_bwd)
-'''
 for name, target in perm.registrations().items():
     jax.ffi.register_ffi_target(name, target)
 
@@ -20,9 +16,25 @@ def total_size(interferometer, cutoff):
       sum += pow(math.comb(d + i - 1 , i), 2)
    return sum
 
+def total_helper_idx_size(interferometer, cutoff):
+   d = len(interferometer)
+   sum = 0
+   for i in range(2, cutoff):
+      sum += math.comb(d + i - 1 , i)
+   return sum * (2+ d)
+
+def total_helper_sqrt_size(interferometer, cutoff):
+   d = len(interferometer)
+   sum = 0
+   for i in range(2, cutoff):
+      sum += math.comb(d + i - 1 , i)
+   return sum * (1 + d)
+
 @partial(jax.custom_vjp)
 def _get_interferometer_on_fock_space_xla( cutoff, interferometer):
-
+  '''if cutoff.dtype != jnp.int:
+    raise ValueError("Only the float32 dtype is implemented by rms_norm")
+    '''
   call = jax.ffi.ffi_call(
     "_get_interferometer_on_fock_space_xla",
     (
@@ -40,8 +52,24 @@ def _get_interferometer_on_fock_space_xla( cutoff, interferometer):
   return sliced_res
 
 def _get_interferometer_on_fock_space_fwd( cutoff, intf):
-  pass
-def _get_interferometer_on_fock_space_bwd(res, ct):
+  ts = total_size(intf, cutoff[0])
+  call = jax.ffi.ffi_call(
+    "_get_interferometer_on_fock_space_fwd",
+    (
+    jax.ShapeDtypeStruct([ts], intf.dtype),
+    jax.ShapeDtypeStruct([cutoff[0]], np.uint64),
+    jax.ShapeDtypeStruct([total_helper_idx_size(intf, cutoff[0]) ], np.uint64),
+    jax.ShapeDtypeStruct([total_helper_sqrt_size(intf, cutoff[0])], np.float64)),
+    vmap_method="broadcast_all",
+  )
+  res, dims, helper_idx, helper_sqrt = call(cutoff, intf)
+  sliced_res = []
+  start_idx = 0
+  for d in dims:
+     sliced_res.append(np.array(res[start_idx:(start_idx+d*d)]).reshape(d,d))
+     start_idx += d*d
+  return res, dims, helper_idx, helper_sqrt
+def _get_interferometer_on_fock_space_bwd(res, dims, helper_idx, helper_sqrt):
   pass
 
 
@@ -87,5 +115,5 @@ def interferometer():
             ],
         ], dtype=np.complex128
     )
-cutoff = np.array([4], dtype=np.uint64)
-print(_get_interferometer_on_fock_space_xla(cutoff, interferometer()))
+cutoff = np.array([3], dtype=np.uint64)
+print(_get_interferometer_on_fock_space_fwd(cutoff, interferometer()))

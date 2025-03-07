@@ -87,13 +87,13 @@ calc_perm(Matrix<std::complex<double>> interferometer,
   }
   return array_ts;
 }
-std::vector<int>
-calc_perm_nc(Matrix<std::complex<double>> interferometer,
-             std::tuple<std::vector<Matrix<int>>, std::vector<Matrix<int>>,
-                        std::vector<Matrix<int>>, std::vector<Matrix<double>>,
-                        std::vector<Matrix<double>>>
-                 helper_indices,
-             Matrix<std::complex<double>> &first) {
+void calc_perm_nc(
+    Matrix<std::complex<double>> interferometer,
+    std::tuple<std::vector<Matrix<int>>, std::vector<Matrix<int>>,
+               std::vector<Matrix<int>>, std::vector<Matrix<double>>,
+               std::vector<Matrix<double>>>
+        helper_indices,
+    Matrix<std::complex<double>> &first, std::vector<int> &dims) {
   // declare, init
   std::vector<Matrix<int>> subspace_indices_array = std::get<0>(helper_indices);
   std::vector<Matrix<int>> first_nonzero_indices_array =
@@ -142,14 +142,11 @@ calc_perm_nc(Matrix<std::complex<double>> interferometer,
     }
     subspace_representations.push_back(representation);
   }
-  std::vector<int> dims = std::vector<int>();
   dims.push_back(first.rows);
   for (int i = 1; i < subspace_representations.size(); i++) {
     first = first.horizontal_concat(subspace_representations[i]);
     dims.push_back(subspace_representations[i].rows);
   }
-
-  return dims;
 }
 
 std::vector<py::array_t<std::complex<double>>>
@@ -162,13 +159,18 @@ _get_interferometer_on_fock_space(
   return calc_perm(
       interf, calculate_interferometer_helper_indices(interf.rows, cutoff));
 }
-std::vector<int> _get_interferometer_on_fock_space_nc(
+std::tuple<std::vector<Matrix<int>>, std::vector<Matrix<int>>,
+           std::vector<Matrix<int>>, std::vector<Matrix<double>>,
+           std::vector<Matrix<double>>>
+_get_interferometer_on_fock_space_nc(
     Matrix<std::complex<double>> interferometer, int cutoff,
-    Matrix<std::complex<double>> &out) {
-  std::vector<int> dims = calc_perm_nc(
-      interferometer,
-      calculate_interferometer_helper_indices(interferometer.rows, cutoff),
-      out);
-  return dims;
+    Matrix<std::complex<double>> &out, std::vector<int> &dims) {
+  std::tuple<std::vector<Matrix<int>>, std::vector<Matrix<int>>,
+             std::vector<Matrix<int>>, std::vector<Matrix<double>>,
+             std::vector<Matrix<double>>>
+      helper =
+          calculate_interferometer_helper_indices(interferometer.rows, cutoff);
+  calc_perm_nc(interferometer, helper, out, dims);
+  return helper;
 }
 #endif
