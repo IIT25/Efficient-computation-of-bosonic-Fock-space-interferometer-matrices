@@ -1,9 +1,12 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
+#include <algorithm>
 #include <cmath>
+#include <complex>
 #include <cstddef>
 #include <cstring>
+#include <stdexcept>
 
 #ifndef DEBUG
 #include <iostream>
@@ -168,6 +171,7 @@ public:
       }
     }
   }
+
   void sqrt(Matrix<double> out) {
     for (size_t i = 0; i < rows; i++) {
       for (size_t j = 0; j < cols; j++) {
@@ -175,6 +179,7 @@ public:
       }
     }
   }
+  void zeros() { memset(data, 0, rows * cols); }
   Matrix<int> mod(Matrix<int> divisor) {
     Matrix<int> r = Matrix<int>(rows, cols);
     for (size_t i = 0; i < rows; i++) {
@@ -198,6 +203,29 @@ public:
     Matrix<Tscalar> res = Matrix<Tscalar>(1, m.size() + (this->size()));
     memcpy(res.data, this->data, this->size() * sizeof(Tscalar));
     memcpy(res.data + this->size(), m.data, m.size() * sizeof(Tscalar));
+    return res;
+  }
+  void add(Matrix<Tscalar> m) {
+    for (int i = 0; i < size(); i++) {
+      data[i] += m.data[i];
+    }
+  }
+  Tscalar einsum_ij_ij(Matrix<Tscalar> m) {
+    size_t eq_rows = std::min(rows, m.rows);
+    size_t eq_cols = std::min(cols, m.cols);
+    Tscalar sum = 0;
+    for (int row_idx = 0; row_idx < eq_rows; row_idx++) {
+      for (int col_idx = 0; col_idx < eq_cols; col_idx++) {
+        sum += (*this)(row_idx, col_idx) * m(row_idx, col_idx);
+      }
+    }
+    return sum;
+  }
+  Matrix<Tscalar> conj() {
+    Matrix<Tscalar> res = Matrix<Tscalar>(rows, cols);
+    for (int idx; idx < size(); idx++) {
+      res[idx] = std::conj(*(data + idx));
+    }
     return res;
   }
 };
