@@ -25,7 +25,6 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include <vcruntime_typeinfo.h>
 #include <vector>
 
 namespace ffi = xla::ffi;
@@ -71,9 +70,9 @@ XLA_FFI_DEFINE_HANDLER_SYMBOL(_get_interferometer_on_fock_space_xla,
                                   .Ret<ffi::Buffer<ffi::C128>>()
                                   .Ret<ffi::Buffer<ffi::U64>>());
 ffi::Error _get_interferometer_on_fock_space_fwd_impl(
-    ffi::Buffer<ffi::U64> cutoff, ffi::Buffer<ffi::C128> interferometer,
-    ffi::ResultBuffer<ffi::C128> y, ffi::ResultBuffer<ffi::U64> y_dims,
-    ffi::ResultBuffer<ffi::U32> helper_idx,
+    ffi::Buffer<ffi::U64> cutoff, ffi::Buffer<ffi::U64> d,
+    ffi::Buffer<ffi::C128> interferometer, ffi::ResultBuffer<ffi::C128> y,
+    ffi::ResultBuffer<ffi::U64> y_dims, ffi::ResultBuffer<ffi::U32> helper_idx,
     ffi::ResultBuffer<ffi::F64> helper_sqrt) {
   auto [totalSize, lastDim] = GetDims(interferometer);
   Matrix<std::complex<double>> interferometerc = Matrix<std::complex<double>>(
@@ -133,6 +132,7 @@ XLA_FFI_DEFINE_HANDLER_SYMBOL(
     _get_interferometer_on_fock_space_fwd,
     _get_interferometer_on_fock_space_fwd_impl,
     ffi::Ffi::Bind()
+        .Arg<ffi::Buffer<ffi::U64>>()
         .Arg<ffi::Buffer<ffi::U64>>()
         .Arg<ffi::Buffer<ffi::C128>>()
         .Ret<ffi::Buffer<ffi::C128>>() // result

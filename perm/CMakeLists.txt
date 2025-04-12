@@ -8,26 +8,36 @@ project(
   perm
   VERSION ${SKBUILD_PROJECT_VERSION}
   LANGUAGES CXX)
+ 
+include(CheckLanguage)
+check_language(CUDA)
+if(CMAKE_CUDA_COMPILER)
+  enable_language(CUDA)
+  set(USE_CUDA ON)
+  message(STATUS "CUDA enabled")
+else()
+  message(STATUS "Building without CUDA")
+endif()
 
 # Find the module development requirements (requires FindPython from 3.17 or
 # scikit-build-core's built-in backport)
 #set(Python_FIND_VIRTUALENV FIRST)
 
-find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
+find_package(Python 3.12 REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(pybind11 CONFIG REQUIRED)
 
-
+set(XLA_DIR /home/sooki/permanent-boost/venv/lib/python3.12/site-packages/jaxlib/include)
 # execute_process(
 #   COMMAND "${Python_EXECUTABLE}"  
 #            "-c" "from jax import ffi; print(ffi.include_dir())"
 #   OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE XLA_DIR)
-# message(STATUS "XLA include directory: ${XLA_DIR}")
+message(STATUS "XLA include directory: ${XLA_DIR}")
 
 
 # Add a library using FindPython's tooling (pybind11 also provides a helper like
 # this)
 python_add_library(_core MODULE src/main.cpp WITH_SOABI)
-set(XLA_DIR C:/Users/erdei/anaconda3/envs/piquasso/Lib/site-packages/jaxlib/include)
+# set(XLA_DIR C:/Users/erdei/anaconda3/envs/piquasso/Lib/site-packages/jaxlib/include)
 target_include_directories(_core PUBLIC "${XLA_DIR}")
 
 
@@ -38,4 +48,15 @@ target_link_libraries(_core PRIVATE pybind11::headers)
 # This is passing in the version as a define just as an example
 target_compile_definitions(_core PRIVATE VERSION_INFO=${PROJECT_VERSION})
 # The install directory is the output (wheel) directory
-install(TARGETS _core DESTINATION perm)
+install(TARGETS _core DESTINATION perm)  
+
+if(USE_CUDA)
+  include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
+  pybind11_add_module(
+    gpu_ops
+    ${CMAKE_CURRENT_LIST_DIR}/src/kernels.cc.cu
+    ${CMAKE_CURRENT_LIST_DIR}/src/gpu_ops.cc)
+  target_include_directories(gpu_ops PRIVATE ${XLA_DIR})
+
+  install(TARGETS gpu_ops DESTINATION perm)
+endif()

@@ -21,7 +21,6 @@
 #include <pybind11/stl.h>
 #include <tuple>
 #include <type_traits>
-#include <vcruntime_typeinfo.h>
 #include <vector>
 
 std::vector<py::array_t<std::complex<double>>>

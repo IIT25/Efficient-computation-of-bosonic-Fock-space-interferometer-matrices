@@ -1,13 +1,17 @@
 import jax
 import math
 from functools import partial
-import numpy as np
 import perm
 import jax.numpy as jnp
 
 jax.config.update("jax_enable_x64", True)
 for name, target in perm.registrations().items():
     jax.ffi.register_ffi_target(name, target)
+
+
+for name, target in perm.gpu_ops.foo().items():
+    print(name, target)
+    jax.ffi.register_ffi_target(name, target, platform="CUDA")
 
 def total_size(interferometer, cutoff):
    d = len(interferometer)
@@ -35,7 +39,7 @@ def _get_interferometer_on_fock_space_xla( cutoff, interferometer):
   '''if cutoff.dtype != jnp.int:
     raise ValueError("Only the float32 dtype is implemented by rms_norm")
     '''
-  call = jax.ffi.ffi_call(
+  '''call = jax.ffi.ffi_call(
     "_get_interferometer_on_fock_space_xla",
     (
     jax.ShapeDtypeStruct([total_size(interferometer, cutoff[0])], interferometer.dtype),
@@ -49,11 +53,24 @@ def _get_interferometer_on_fock_space_xla( cutoff, interferometer):
      sliced_res.append(np.array(res[start_idx:(start_idx+d*d)]).reshape(d,d))
      start_idx += d*d
   print(sliced_res)
-  return sliced_res
+  '''
+  def impl(target_name): 
+     return lambda: jax.ffi.ffi_call(
+        target_name,
+        (
+        jax.ShapeDtypeStruct([total_size(interferometer, cutoff[0])], interferometer.dtype),
+        jax.ShapeDtypeStruct([cutoff[0]], jnp.uint64)),
+        vmap_method="broadcast_all",
+      ) (cutoff, interferometer)
+      
+  return jax.lax.platform_dependent(
+        cpu=impl("_get_interferometer_on_fock_space_xla"),
+        cuda=impl("calc_perm_fwd")
+    )
 
-def _get_interferometer_on_fock_space_fwd( cutoff, intf):
+def _get_interferometer_on_fock_space_fwd(cutoff, d,  intf):
   ts = total_size(intf, cutoff[0])
-  call = jax.ffi.ffi_call(
+  '''call = jax.ffi.ffi_call(
     "_get_interferometer_on_fock_space_fwd",
     (
     jax.ShapeDtypeStruct([ts], intf.dtype),
@@ -62,8 +79,24 @@ def _get_interferometer_on_fock_space_fwd( cutoff, intf):
     jax.ShapeDtypeStruct([total_helper_sqrt_size(intf, cutoff[0])], np.float64)),
     vmap_method="broadcast_all",
   )
-  res, dims, helper_idx, helper_sqrt = call(cutoff, intf)
-  return res, dims, helper_idx, helper_sqrt
+  '''
+  #res, dims, helper_idx, helper_sqrt = call(cutoff, intf)
+  def impl(target_name): 
+     return lambda: jax.ffi.ffi_call(
+    target_name,
+    (
+    jax.ShapeDtypeStruct([ts], intf.dtype),
+    jax.ShapeDtypeStruct([cutoff[0]], jnp.uint64),
+    jax.ShapeDtypeStruct([total_helper_idx_size(intf, cutoff[0]) ], jnp.uint32),
+    jax.ShapeDtypeStruct([total_helper_sqrt_size(intf, cutoff[0])], jnp.float64)),
+    vmap_method="broadcast_all",
+  ) (cutoff, d, intf)
+      
+  return jax.lax.platform_dependent(
+        cpu=impl("_get_interferometer_on_fock_space_fwd"),
+        cuda=impl("calc_perm_fwd")
+    )
+  #return res, dims, helper_idx, helper_sqrt
 def _get_interferometer_on_fock_space_bwd(cutoff, interferometer, res, dims, helper_idx, helper_sqrt):
   call = jax.ffi.ffi_call(
     "_get_interferometer_on_fock_space_bwd",
@@ -78,7 +111,7 @@ def _get_interferometer_on_fock_space_bwd(cutoff, interferometer, res, dims, hel
 _get_interferometer_on_fock_space_xla.defvjp(_get_interferometer_on_fock_space_fwd, _get_interferometer_on_fock_space_bwd)
 
 def interferometer():
-    return np.array(
+    return jnp.array(
         [
             [
                 -0.11035524 + 0.43053175j,
@@ -115,9 +148,13 @@ def interferometer():
                 -0.07509227 + 0.08557502j,
                 -0.12237335 - 0.42143858j,
             ],
-        ], dtype=np.complex128
+        ], dtype=jnp.complex128
     )
-cutoff = np.array([3], dtype=np.uint64)
-resj, dimsj, helper_idxj, helper_sqrtj = _get_interferometer_on_fock_space_fwd(cutoff, interferometer())
+cutoff = jnp.array([7], dtype=jnp.uint64)
+d = jnp.array([5], dtype=jnp.uint64)
+res = _get_interferometer_on_fock_space_fwd(cutoff, d, interferometer())
+print(res[0][25:50])
+'''resj, dimsj, helper_idxj, helper_sqrtj = _get_interferometer_on_fock_space_fwd(cutoff, interferometer())
 _get_interferometer_on_fock_space_bwd(cutoff, interferometer(), resj, dimsj, helper_idxj, helper_sqrtj)
 
+'''

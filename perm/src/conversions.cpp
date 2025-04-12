@@ -16,7 +16,6 @@
 #include <pybind11/pytypes.h>
 #include <pybind11/stl.h>
 #include <tuple>
-#include <vcruntime_typeinfo.h>
 #include <vector>
 
 namespace py = pybind11;
