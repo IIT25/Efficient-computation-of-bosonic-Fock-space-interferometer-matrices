@@ -1,4 +1,5 @@
 #include "matrix.hpp"
+#include <complex>
 #include <cstddef>
 #include <cstdio>
 #include <cuComplex.h>
@@ -124,4 +125,64 @@ __device__ int get_index_in_fock_subspace(Matrix<int> element) {
     accumulator += binomialCoeff(sum_ + i, i + 1);
   }
   return accumulator;
+}
+
+__device__ Matrix<cuda::std::complex<double>> _calculate_subspace_grad(
+    int row_index, int col_index,
+    Matrix<cuda::std::complex<double>> previous_subspace_representation,
+    Matrix<int> subspace_indices, Matrix<int> first_subspace_indices,
+    Matrix<int> first_nonzero_indices, Matrix<double> sqrt_occupation_numbers,
+    Matrix<double> sqrt_first_occupation_numbers,
+    Matrix<cuda::std::complex<double>> interferometer,
+    Matrix<cuda::std::complex<double>> previous_subspace_grad) {
+  int matrix_dim = sqrt_occupation_numbers.rows;
+  Matrix<cuda::std::complex<double>> subspace_grad =
+      Matrix<cuda::std::complex<double>>(matrix_dim, matrix_dim);
+  for (int jdx = 0; jdx < matrix_dim; jdx++) {
+    for (int idx = 0; idx < first_nonzero_indices.cols; idx++) {
+      int first_nonzero_index = first_nonzero_indices[idx];
+      if (first_nonzero_index != row_index) {
+        continue;
+      }
+      subspace_grad(idx, jdx) +=
+          previous_subspace_representation(first_subspace_indices[idx],
+                                           subspace_indices(jdx, col_index)) *
+          sqrt_occupation_numbers(jdx, col_index);
+    }
+    for (int idx = 0; idx < matrix_dim; idx++) {
+      for (int kdx = 0; kdx < sqrt_occupation_numbers.cols; kdx++) {
+        subspace_grad(idx, jdx) +=
+            sqrt_occupation_numbers(jdx, kdx) *
+            interferometer(first_nonzero_indices[idx], kdx) *
+            previous_subspace_grad(first_subspace_indices[idx],
+                                   subspace_indices(jdx, kdx));
+      }
+      subspace_grad(idx, jdx) /= sqrt_first_occupation_numbers[idx];
+    }
+  }
+  return subspace_grad;
+}
+__device__ Matrix<cuda::std::complex<double>>
+conj(Matrix<cuda::std::complex<double>> m) {
+  Matrix<cuda::std::complex<double>> res =
+      Matrix<cuda::std::complex<double>>(m.rows, m.cols);
+  for (int idx = 0; idx < m.size(); idx++) {
+    res[idx] = cuda::std::complex<double>((*(m.data + idx)).real(),
+                                          -(*(m.data + idx)).imag());
+  }
+  return res;
+}
+
+__device__ cuda::std::complex<double>
+einsum_ij_ij(Matrix<cuda::std::complex<double>> m,
+             Matrix<cuda::std::complex<double>> n) {
+  size_t eq_rows = min(n.rows, m.rows);
+  size_t eq_cols = min(n.cols, m.cols);
+  cuda::std::complex<double> sum = 0;
+  for (int row_idx = 0; row_idx < eq_rows; row_idx++) {
+    for (int col_idx = 0; col_idx < eq_cols; col_idx++) {
+      sum += n(row_idx, col_idx) * m(row_idx, col_idx);
+    }
+  }
+  return sum;
 }

@@ -39,9 +39,7 @@ calc_perm_fwd_kernel(unsigned long *cutoff_, unsigned long *d_,
 
   for (size_t i = 0; i < space.rows; i++) {
     Matrix<int> current_basis = space.rowidx(i);
-    Matrix<double> sqrt_source;
-    sqrt_space.rowidxR(i, &sqrt_source);
-    current_basis.sqrt(sqrt_source);
+    current_basis.sqrt_indexed(&sqrt_space, i);
     bool found_first = false;
     for (size_t j = 0; j < d; j++) {
       current_basis[j] -= 1;
@@ -67,8 +65,11 @@ calc_perm_fwd_kernel(unsigned long *cutoff_, unsigned long *d_,
 
   y_dims[0] = 1;
   y_dims[1] = d;
+  // buffer counters
   y[0] = first.data[0];
   int result_size = 1;
+  int helper_idx_size = 0;
+  int helper_sqrt_size = 0;
   Matrix<cuda::std::complex<double>> interferometer =
       Matrix<cuda::std::complex<double>>(d, d, interferometer_);
   for (int i = 0; i < interferometer.size(); i++) {
@@ -76,7 +77,7 @@ calc_perm_fwd_kernel(unsigned long *cutoff_, unsigned long *d_,
     result_size++;
   }
   Matrix<cuda::std::complex<double>> previous_representation = interferometer;
-  // result buffer pointers
+
   //  main loop
   for (size_t n = 2; n < cutoff; n++) {
     Matrix<int> subspace_range = Matrix<int>(1, indices[n] - indices[n - 1]);
@@ -88,19 +89,17 @@ calc_perm_fwd_kernel(unsigned long *cutoff_, unsigned long *d_,
     Matrix<int> first_nonzero_indices =
         (*first_nonzero_space_index[subspace_range]);
     Matrix<double> sqrt_occupation_numbers = (*sqrt_space[subspace_range]);
-    Matrix<double> sqrt_first_occupation_numbers_tensor =
+    Matrix<double> sqrt_first_occupation_numbers_indexed =
         (*sqrt_first_occupation_numbers[subspace_range]);
 
     Matrix<cuda::std::complex<double>> representation =
         Matrix<cuda::std::complex<double>>(first_nonzero_indices.cols,
                                            sqrt_occupation_numbers.rows);
     y_dims[n] = first_nonzero_indices.cols;
-    if (n == 2) {
-      first_nonzero_indices.print();
-    }
 
     for (size_t k = 0; k < first_nonzero_indices.cols; k++) {
-      cuda::std::complex<double> denominator = sqrt_first_occupation_numbers[k];
+      cuda::std::complex<double> denominator =
+          sqrt_first_occupation_numbers_indexed[k];
       Matrix<cuda::std::complex<double>> previous_representation_indexed =
           previous_representation.rowidx(first_subspace_indices[k]);
       for (size_t j = 0; j < sqrt_occupation_numbers.cols; j++) {
@@ -117,7 +116,24 @@ calc_perm_fwd_kernel(unsigned long *cutoff_, unsigned long *d_,
       y[result_size] = representation.data[i];
       result_size++;
     }
-    previous_representation = representation;
+    for (int i = 0; i < subspace_indices.size(); i++) {
+      helper_idx[helper_idx_size] = subspace_indices[i];
+      helper_sqrt[helper_sqrt_size] = sqrt_occupation_numbers[i];
+      helper_idx_size++;
+      helper_sqrt_size++;
+    }
+    for (int i = 0; i < first_nonzero_indices.size(); i++) {
+      helper_idx[helper_idx_size] = first_nonzero_indices[i];
+      helper_idx_size++;
+    }
+    for (int i = 0; i < first_subspace_indices.size(); i++) {
+      helper_idx[helper_idx_size] = first_subspace_indices[i];
+      helper_idx_size++;
+    }
+    for (int i = 0; i < sqrt_first_occupation_numbers_indexed.size(); i++) {
+      helper_sqrt[helper_sqrt_size] = sqrt_first_occupation_numbers_indexed[i];
+      helper_sqrt_size++;
+    }
   }
 }
 
@@ -128,7 +144,7 @@ ffi::Error calc_perm_fwd_host(cudaStream_t stream, ffi::Buffer<ffi::U64> cutoff,
                               ffi::ResultBuffer<ffi::U64> y_dims,
                               ffi::ResultBuffer<ffi::U32> helper_idx,
                               ffi::ResultBuffer<ffi::F64> helper_sqrt) {
-  const int block_dim = 2;
+  const int block_dim = 1;
   const int grid_dim = 1;
   using std::chrono::duration;
   using std::chrono::duration_cast;
@@ -166,31 +182,111 @@ ffi::Error calc_perm_fwd_host(cudaStream_t stream, ffi::Buffer<ffi::U64> cutoff,
 }
 
 __global__ void
-calc_perm_bwd_kernel(const cuda::std::complex<double> *interferometer,
-                     cuda::std::complex<double> *y, int *y_dims,
-                     int *helper_idx, double *helper_sqrt,
-                     cuda::std::complex<double> *upstream_buff,
+calc_perm_bwd_kernel(cuda::std::complex<double> *interferometer_,
+                     const int *cutoff_, const int *d_,
+                     cuda::std::complex<double> *y_, unsigned long *y_dims_,
+                     int *helper_idx_, double *helper_sqrt_,
+                     cuda::std::complex<double> *upstream_buff_,
                      cuda::std::complex<double> *result) {
   size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
   const size_t grid_stride = blockDim.x * gridDim.x;
-  /*for (size_t i = tid; i < n; i += grid_stride) {
-    a_grad[i] = c_grad[i] * b_plus_1[i];
-    b_grad[i] = c_grad[i] * a[i];
-  }*/
-}
+  // unwrap buffers
+  unsigned long cutoff = *cutoff_;
+  unsigned long d = *d_;
+  Matrix<cuda::std::complex<double>> interferometer =
+      Matrix<cuda::std::complex<double>>(d, d, interferometer_);
+  Matrix<unsigned long> y_dims = Matrix<unsigned long>(1, cutoff, y_dims_);
+  Matrix<cuda::std::complex<double>> upstream =
+      Matrix<cuda::std::complex<double>>(d, d, upstream_buff_);
+  Matrix<cuda::std::complex<double>> full_kl_grad =
+      Matrix<cuda::std::complex<double>>(interferometer.rows,
+                                         interferometer.cols);
+  for (int i = tid; i < d * d; i += grid_stride) {
+    full_kl_grad.data[i] = cuda::std::complex<double>(0.0, 0.0);
+  }
+  __syncthreads();
 
-ffi::Error calc_perm_bwd_host(
-    cudaStream_t stream, ffi::Buffer<ffi::C128> interferometer,
-    ffi::Buffer<ffi::C128> y, ffi::Buffer<ffi::U64> y_dim,
-    ffi::Buffer<ffi::U32> helper_idx, ffi::Buffer<ffi::F64> helper_sqrt,
-    ffi::Buffer<ffi::C128> upstream_buff, ffi::ResultBuffer<ffi::C128> result) {
-  const int block_dim = 128;
+  for (int row_index = 0; row_index < d; row_index++) {
+    for (int col_index = 0; col_index < d; col_index++) {
+      Matrix<cuda::std::complex<double>> second_subspace_grad =
+          Matrix<cuda::std::complex<double>>(interferometer.rows,
+                                             interferometer.cols);
+      for (int i = tid; i < d * d; i += grid_stride) {
+        second_subspace_grad[i] = cuda::std::complex<double>(0.0, 0.0);
+      }
+      __syncthreads();
+      second_subspace_grad(row_index, col_index) = 1.0;
+      Matrix<cuda::std::complex<double>> previous_subspace_grad =
+          second_subspace_grad;
+      int res_size = 1;
+      int upstream_size = 1 + d * d;
+      int helper_idx_size = 0;
+      int helper_sqrt_size = 0;
+      for (int p = 2; p < cutoff; p++) {
+        Matrix<cuda::std::complex<double>> previous_subspace_representation =
+            Matrix<cuda::std::complex<double>>(y_dims[p - 1], y_dims[p - 1],
+                                               y_ + res_size);
+        Matrix<cuda::std::complex<double>> upstream_p =
+            Matrix<cuda::std::complex<double>>(y_dims[p], y_dims[p],
+                                               upstream_buff_ + upstream_size);
+        upstream_size += y_dims[p] * y_dims[p];
+        res_size += y_dims[p - 1] * y_dims[p - 1];
+        Matrix<int> subspace_indices = Matrix<int>(
+            y_dims[p], interferometer.rows, helper_idx_ + helper_idx_size);
+        helper_idx_size += y_dims[p] * interferometer.rows;
+        Matrix<int> first_nonzero_indices =
+            Matrix<int>(1, y_dims[p], helper_idx_ + helper_idx_size);
+        helper_idx_size += y_dims[p];
+        Matrix<int> first_subspace_indices =
+            Matrix<int>(1, y_dims[p], helper_idx_ + helper_idx_size);
+        helper_idx_size += y_dims[p];
+        Matrix<double> sqrt_occupation_numbers = Matrix<double>(
+            y_dims[p], interferometer.rows, helper_sqrt_ + helper_sqrt_size);
+        helper_sqrt_size += y_dims[p] * interferometer.rows;
+        Matrix<double> sqrt_first_occupation_numbers =
+            Matrix<double>(1, y_dims[p], helper_sqrt_ + helper_sqrt_size);
+        helper_sqrt_size += y_dims[p];
+        Matrix<cuda::std::complex<double>> subspace_grad =
+            _calculate_subspace_grad(
+                row_index, col_index, previous_subspace_representation,
+                subspace_indices, first_subspace_indices, first_nonzero_indices,
+                sqrt_occupation_numbers, sqrt_first_occupation_numbers,
+                interferometer, previous_subspace_grad);
+        full_kl_grad(row_index, col_index) +=
+            einsum_ij_ij(conj(subspace_grad), upstream_p);
+        if (row_index == 0 && col_index == 0) {
+          upstream_p.print_complex();
+        }
+        previous_subspace_grad = subspace_grad;
+      }
+    }
+  }
+  // full_kl_grad.print_complex();
+  Matrix<cuda::std::complex<double>> upstream_1 =
+      Matrix<cuda::std::complex<double>>(d, d, upstream_buff_ + 1);
+  full_kl_grad.add(upstream_1);
+  // convert result to buffer
+  for (size_t i = 0; i < full_kl_grad.size(); i++) {
+    result[i] = full_kl_grad[i];
+  }
+}
+ffi::Error calc_perm_bwd_host(cudaStream_t stream, ffi::Buffer<ffi::U64> cutoff,
+                              ffi::Buffer<ffi::C128> interferometer,
+                              ffi::Buffer<ffi::U64> d, ffi::Buffer<ffi::C128> y,
+                              ffi::Buffer<ffi::U64> y_dim,
+                              ffi::Buffer<ffi::U32> helper_idx,
+                              ffi::Buffer<ffi::F64> helper_sqrt,
+                              ffi::Buffer<ffi::C128> upstream_buff,
+                              ffi::ResultBuffer<ffi::C128> result) {
+  const int block_dim = 1;
   const int grid_dim = 1;
   calc_perm_bwd_kernel<<<grid_dim, block_dim, /*shared_mem=*/0, stream>>>(
-      reinterpret_cast<const cuda::std::complex<double> *>(
+      reinterpret_cast<cuda::std::complex<double> *>(
           interferometer.typed_data()),
+      reinterpret_cast<const int *>(cutoff.typed_data()),
+      reinterpret_cast<const int *>(d.typed_data()),
       reinterpret_cast<cuda::std::complex<double> *>(y.typed_data()),
-      reinterpret_cast<int *>(y_dim.typed_data()),
+      reinterpret_cast<unsigned long *>(y_dim.typed_data()),
       reinterpret_cast<int *>(helper_idx.typed_data()),
       reinterpret_cast<double *>(helper_sqrt.typed_data()),
       reinterpret_cast<cuda::std::complex<double> *>(

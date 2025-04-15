@@ -177,7 +177,8 @@ Matrix<std::complex<double>> _calculate_subspace_grad(
   return subspace_grad;
 }
 ffi::Error _get_interferometer_on_fock_space_bwd_impl(
-    ffi::Buffer<ffi::C128> interferometer, ffi::Buffer<ffi::C128> y,
+    ffi::Buffer<ffi::U64> cutoff_, ffi::Buffer<ffi::C128> interferometer,
+    ffi::Buffer<ffi::U64> d_, ffi::Buffer<ffi::C128> y,
     ffi::Buffer<ffi::U64> y_dim, ffi::Buffer<ffi::U32> helper_idx,
     ffi::Buffer<ffi::F64> helper_sqrt, ffi::Buffer<ffi::C128> upstream_buff,
     ffi::ResultBuffer<ffi::C128> result) {
@@ -275,6 +276,9 @@ ffi::Error _get_interferometer_on_fock_space_bwd_impl(
             interferometerc, previous_subspace_grad);
         full_kl_grad(row_index, col_index) +=
             upstream[p].einsum_ij_ij(subspace_grad.conj());
+        if (row_index == 0 && col_index == 0) {
+          upstream[p].print_complex();
+        }
         previous_subspace_grad = subspace_grad;
       }
     }
@@ -290,7 +294,9 @@ ffi::Error _get_interferometer_on_fock_space_bwd_impl(
 XLA_FFI_DEFINE_HANDLER_SYMBOL(_get_interferometer_on_fock_space_bwd,
                               _get_interferometer_on_fock_space_bwd_impl,
                               ffi::Ffi::Bind()
+                                  .Arg<ffi::Buffer<ffi::U64>>()
                                   .Arg<ffi::Buffer<ffi::C128>>()
+                                  .Arg<ffi::Buffer<ffi::U64>>()
                                   .Arg<ffi::Buffer<ffi::C128>>()
                                   .Arg<ffi::Buffer<ffi::U64>>()
                                   .Arg<ffi::Buffer<ffi::U32>>()

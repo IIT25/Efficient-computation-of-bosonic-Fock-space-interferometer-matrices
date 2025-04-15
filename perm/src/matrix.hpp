@@ -1,6 +1,7 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
+#include "math.h"
 #include <algorithm>
 #include <cmath>
 #include <complex>
@@ -97,7 +98,7 @@ public:
               << "The stored matrix (" << rows << " x " << cols
               << "):" << std::endl;
   }
-  HOST_DEVICE void print() {
+  HOST_DEVICE void print_complex() {
     printf("The stored matrix (%zu x %zu):\n", rows, cols);
     /*std::cout << std::endl
               << "The stored matrix (" << rows << " x " << cols
@@ -107,6 +108,40 @@ public:
         size_t element_idx = row_idx * stride + col_idx;
         printf(" ( %f, %f)", data[element_idx].real(),
                data[element_idx].imag());
+        // std::cout << " " << data[element_idx];
+      }
+      printf("\n");
+      // std::cout << std::endl;
+    }
+    printf("----------------\n");
+    // std::cout << "------------------------" << std::endl;
+  }
+  HOST_DEVICE void print_int() {
+    printf("The stored matrix (%lu x %lu):\n", rows, cols);
+    /*std::cout << std::endl
+              << "The stored matrix (" << rows << " x " << cols
+              << "):" << std::endl;*/
+    for (size_t row_idx = 0; row_idx < rows; row_idx++) {
+      for (size_t col_idx = 0; col_idx < cols; col_idx++) {
+        size_t element_idx = row_idx * stride + col_idx;
+        printf(" %d", data[element_idx]);
+        // std::cout << " " << data[element_idx];
+      }
+      printf("\n");
+      // std::cout << std::endl;
+    }
+    printf("----------------\n");
+    // std::cout << "------------------------" << std::endl;
+  }
+  HOST_DEVICE void print_double() {
+    printf("The stored matrix (%lu x %lu):\n", rows, cols);
+    /*std::cout << std::endl
+              << "The stored matrix (" << rows << " x " << cols
+              << "):" << std::endl;*/
+    for (size_t row_idx = 0; row_idx < rows; row_idx++) {
+      for (size_t col_idx = 0; col_idx < cols; col_idx++) {
+        size_t element_idx = row_idx * stride + col_idx;
+        printf(" %f", data[element_idx]);
         // std::cout << " " << data[element_idx];
       }
       printf("\n");
@@ -184,14 +219,21 @@ public:
     }
   }
 
-  HOST_DEVICE void sqrt(Matrix<double> out) {
+  void sqrt(Matrix<double> out) {
     for (size_t i = 0; i < rows; i++) {
       for (size_t j = 0; j < cols; j++) {
         *(out.data + j + i * stride) = std::sqrt(*(data + j + i * stride));
       }
     }
   }
-  HOST_DEVICE void zeros() { memset(data, 0, rows * cols); }
+  HOST_DEVICE void sqrt_indexed(Matrix<double> *out, size_t idx) {
+    for (size_t i = 0; i < rows; i++) {
+      for (size_t j = 0; j < cols; j++) {
+        out->data[j + (idx + i) * stride] = sqrtf((float)data[j + i * stride]);
+      }
+    }
+  }
+  void zeros() { memset(data, 0, rows * cols); }
   Matrix<int> mod(Matrix<int> divisor) {
     Matrix<int> r = Matrix<int>(rows, cols);
     for (size_t i = 0; i < rows; i++) {
@@ -217,12 +259,12 @@ public:
     memcpy(res.data + this->size(), m.data, m.size() * sizeof(Tscalar));
     return res;
   }
-  void add(Matrix<Tscalar> m) {
+  HOST_DEVICE void add(Matrix<Tscalar> m) {
     for (int i = 0; i < size(); i++) {
       data[i] += m.data[i];
     }
   }
-  HOST_DEVICE Tscalar einsum_ij_ij(Matrix<Tscalar> m) {
+  Tscalar einsum_ij_ij(Matrix<Tscalar> m) {
     size_t eq_rows = std::min(rows, m.rows);
     size_t eq_cols = std::min(cols, m.cols);
     Tscalar sum = 0;
@@ -233,9 +275,9 @@ public:
     }
     return sum;
   }
-  HOST_DEVICE Matrix<Tscalar> conj() {
+  Matrix<Tscalar> conj() {
     Matrix<Tscalar> res = Matrix<Tscalar>(rows, cols);
-    for (int idx; idx < size(); idx++) {
+    for (int idx = 0; idx < size(); idx++) {
       res[idx] = std::conj(*(data + idx));
     }
     return res;

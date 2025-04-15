@@ -4,6 +4,7 @@ from functools import partial
 import perm
 import jax.numpy as jnp
 
+
 jax.config.update("jax_enable_x64", True)
 for name, target in perm.registrations().items():
     jax.ffi.register_ffi_target(name, target)
@@ -43,14 +44,14 @@ def _get_interferometer_on_fock_space_xla( cutoff, interferometer):
     "_get_interferometer_on_fock_space_xla",
     (
     jax.ShapeDtypeStruct([total_size(interferometer, cutoff[0])], interferometer.dtype),
-    jax.ShapeDtypeStruct([cutoff[0]], np.uint64)),
+    jax.ShapeDtypeStruct([cutoff[0]], jnp.uint64)),
     vmap_method="broadcast_all",
   )
   res, dims = call(cutoff, interferometer)
   sliced_res = []
   start_idx = 0
   for d in dims:
-     sliced_res.append(np.array(res[start_idx:(start_idx+d*d)]).reshape(d,d))
+     sliced_res.append(jnp.array(res[start_idx:(start_idx+d*d)]).reshape(d,d))
      start_idx += d*d
   print(sliced_res)
   '''
@@ -74,9 +75,9 @@ def _get_interferometer_on_fock_space_fwd(cutoff, d,  intf):
     "_get_interferometer_on_fock_space_fwd",
     (
     jax.ShapeDtypeStruct([ts], intf.dtype),
-    jax.ShapeDtypeStruct([cutoff[0]], np.uint64),
-    jax.ShapeDtypeStruct([total_helper_idx_size(intf, cutoff[0]) ], np.uint32),
-    jax.ShapeDtypeStruct([total_helper_sqrt_size(intf, cutoff[0])], np.float64)),
+    jax.ShapeDtypeStruct([cutoff[0]], jnp.uint64),
+    jax.ShapeDtypeStruct([total_helper_idx_size(intf, cutoff[0]) ], jnp.uint32),
+    jax.ShapeDtypeStruct([total_helper_sqrt_size(intf, cutoff[0])], jnp.float64)),
     vmap_method="broadcast_all",
   )
   '''
@@ -97,7 +98,19 @@ def _get_interferometer_on_fock_space_fwd(cutoff, d,  intf):
         cuda=impl("calc_perm_fwd")
     )
   #return res, dims, helper_idx, helper_sqrt
-def _get_interferometer_on_fock_space_bwd(cutoff, interferometer, res, dims, helper_idx, helper_sqrt):
+def _get_interferometer_on_fock_space_bwd(cutoff, interferometer, d, res, dims, helper_idx, helper_sqrt, upstream):
+  def impl(target_name):
+       return lambda: jax.ffi.ffi_call(
+      target_name,
+      (
+      jax.ShapeDtypeStruct(interferometer.shape, res.dtype)),
+      vmap_method="broadcast_all") (cutoff, interferometer, d, res, dims, helper_idx, helper_sqrt, upstream)
+    
+  return jax.lax.platform_dependent(
+          cpu=impl("_get_interferometer_on_fock_space_bwd"),
+          cuda=impl("calc_perm_bwd")
+        )
+  
   call = jax.ffi.ffi_call(
     "_get_interferometer_on_fock_space_bwd",
     (
@@ -150,11 +163,13 @@ def interferometer():
             ],
         ], dtype=jnp.complex128
     )
-cutoff = jnp.array([7], dtype=jnp.uint64)
+cutoff = jnp.array([3], dtype=jnp.uint64)
 d = jnp.array([5], dtype=jnp.uint64)
 res = _get_interferometer_on_fock_space_fwd(cutoff, d, interferometer())
-print(res[0][25:50])
-'''resj, dimsj, helper_idxj, helper_sqrtj = _get_interferometer_on_fock_space_fwd(cutoff, interferometer())
-_get_interferometer_on_fock_space_bwd(cutoff, interferometer(), resj, dimsj, helper_idxj, helper_sqrtj)
+#print(res[2])
 
-'''
+resj, dimsj, helper_idxj, helper_sqrtj = _get_interferometer_on_fock_space_fwd(cutoff, d, interferometer())
+print(dimsj)
+upstream = resj
+result = _get_interferometer_on_fock_space_bwd(cutoff, interferometer(), d, resj, dimsj, helper_idxj, helper_sqrtj, upstream)
+print(result)

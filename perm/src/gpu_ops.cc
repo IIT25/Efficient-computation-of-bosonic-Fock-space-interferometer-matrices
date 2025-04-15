@@ -21,7 +21,9 @@ XLA_FFI_DEFINE_HANDLER_SYMBOL(
     calc_perm_bwd, calc_perm_bwd_host,
     ffi::Ffi::Bind()
         .Ctx<ffi::PlatformStream<cudaStream_t>>() // stream
+        .Arg<ffi::Buffer<ffi::U64>>()
         .Arg<ffi::Buffer<ffi::C128>>()
+        .Arg<ffi::Buffer<ffi::U64>>()
         .Arg<ffi::Buffer<ffi::C128>>()
         .Arg<ffi::Buffer<ffi::U64>>()
         .Arg<ffi::Buffer<ffi::U32>>()
