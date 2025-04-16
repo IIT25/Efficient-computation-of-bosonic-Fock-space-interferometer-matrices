@@ -1,27 +1,11 @@
-from read_utils import write_pickle, read_pickle
-#from gpu_test import  interferometer,_get_interferometer_on_fock_space_fwd, _get_interferometer_on_fock_space_bwd, _get_interferometer_on_fock_space_xla
+from read_utils import read_file, write_pickle
+from gpu_test import  interferometer,_get_interferometer_on_fock_space_fwd, _get_interferometer_on_fock_space_bwd, _get_interferometer_on_fock_space_xla
 import tkinter as tk
-window = tk.Tk()
-greeting = tk.Label(text="Amazing interferometer calculator")
-tk.Button(window, text="Quit", command=window.destroy).grid(row=0)
-e1 = tk.Entry(window)
-e2 = tk.Entry(window)
-e3 = tk.Entry(window)
-greeting.grid(row=1)
-tk.Label(window, text="cutoff: ").grid(row=2, column=0)
-tk.Label(window, text="d: ").grid(row=3, column=0)
-tk.Label(window, text="interferometer file name: ").grid(row=4, column=0)
-
-e1.grid(row=2, column=1)
-e2.grid(row=3, column=1)
-e3.grid(row=4, column=1)
-
-window.mainloop()
-
 import pickle
 import numpy as np
-cutoff = 3
-d = 5
+
+
+
 interferometer =  [
             [
                 -0.11035524 + 0.43053175j,
@@ -59,7 +43,76 @@ interferometer =  [
                 -0.12237335 - 0.42143858j,
             ],
         ]
-write_pickle("test.pkl", interferometer)
-with open("test.pkl", 'rb') as inp:
-        parameters = pickle.load(inp)
-print(parameters)
+write_pickle("int.pkl", interferometer)
+write_pickle("u.pkl", interferometer)
+
+created_results = []
+created_inputs = []
+window = tk.Tk()
+output_frame = tk.Frame(window, bg="green")
+input_frame = tk.Frame(window, bg="skyblue")
+def show_upstream():
+    if int(grad.get()) == 0:
+          for inp in created_inputs:
+            inp.destroy()
+    else:
+        l = tk.Label(input_frame, text="upstream: ")
+        created_inputs.append(l)
+        l.pack(fill="both", expand=True)
+        e = tk.Entry(input_frame)
+        created_inputs.append(e)
+        e.pack(fill="both", expand=True) 
+def show_entry_fields():
+    l = tk.Label(output_frame, text="matrix ")
+    created_results.append(l)
+    l.pack(fill="both", expand=True, padx=5, pady=5)
+    print("cutoff: %s\nd: %s\n ineterferometer file name: %s\n grad: %s" % (e1.get(), e2.get(), e3.get(), grad.get()))
+    bwd = grad.get()
+    cutoff = e1.get()
+    d = e2.get()
+    if bwd:
+         interferometer = read_file(e3.get())
+         upstream = read_file(created_inputs[1])
+         forward = _get_interferometer_on_fock_space_fwd(cutoff, d, interferometer)
+         backward = _get_interferometer_on_fock_space_bwd(forward, upstream)
+         print(forward[0])
+         print(backward)
+
+
+          
+def delete_output():
+      for res in created_results:
+            res.destroy()
+
+
+
+greeting = tk.Label(text="Amazing interferometer calculator")
+e1 = tk.Entry(input_frame)
+e2 = tk.Entry(input_frame)
+e3 = tk.Entry(input_frame)
+greeting.pack()
+tk.Label(input_frame, text="cutoff: ").pack(fill="both", expand=True)
+tk.Label(input_frame, text="d: ").pack(fill="both", expand=True)
+tk.Label(input_frame, text="interferometer file name: ").pack(fill="both", expand=True)
+
+e1.pack(fill="both", expand=True)
+e2.pack(fill="both", expand=True)
+e3.pack(fill="both", expand=True)
+tk.Button(input_frame, 
+          text='Show output', command=show_entry_fields).pack(
+                                                       pady=4)
+tk.Button(input_frame, 
+          text='Delete output', command=delete_output).pack(
+                                                       pady=4)
+grad = tk.IntVar()
+c1 = tk.Checkbutton(input_frame, text='With gradient', variable=grad,onvalue=1, offvalue=0, command=show_upstream)
+c1.pack(fill="both", expand=True)
+input_frame.pack(padx=5, pady=5, fill="both", expand=True)
+
+output_frame.pack(padx=5, pady=5, fill="both", expand=True)
+window.mainloop()
+
+
+
+
+
