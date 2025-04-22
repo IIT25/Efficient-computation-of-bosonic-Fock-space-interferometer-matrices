@@ -7,14 +7,18 @@ import jax.numpy as np
 
 jax.config.update('jax_platform_name', 'cpu')
 jax.config.update("jax_enable_x64", True)
+
 for name, target in perm.registrations().items():
-    jax.ffi.register_ffi_target(name, target)
+      jax.ffi.register_ffi_target(name, target)
 
 
-for name, target in perm.gpu_ops.foo().items():
-    print(name, target)
-    jax.ffi.register_ffi_target(name, target, platform="CUDA")
-
+try:
+  from . import gpu_ops
+  for name, target in perm.gpu_ops.foo().items():
+      print(name, target)
+      jax.ffi.register_ffi_target(name, target, platform="cuda")
+except(ImportError):
+  gpu_ops = None
 def total_size(interferometer, cutoff):
    d = len(interferometer)
    sum = 1 + pow(d,2)
@@ -166,10 +170,10 @@ def interferometer():
     )
 cutoff = np.array([3], dtype=np.uint64)
 d = np.array([5], dtype=np.uint64)
+#with jax.default_device(jax.devices('cpu')[0]):
 res = _get_interferometer_on_fock_space_fwd(cutoff, d, interferometer())
 
-with jax.default_device(jax.devices('cpu')[0]):
-  resj, dimsj, helper_idxj, helper_sqrtj = _get_interferometer_on_fock_space_fwd(cutoff, d, interferometer())
-  upstream = resj
-  result = _get_interferometer_on_fock_space_bwd(cutoff, interferometer(), d, resj, dimsj, helper_idxj, helper_sqrtj, upstream)
-  print(result)
+
+resj, dimsj, helper_idxj, helper_sqrtj = _get_interferometer_on_fock_space_fwd(cutoff, d, interferometer())
+upstream = resj
+result = _get_interferometer_on_fock_space_bwd(cutoff, interferometer(), d, resj, dimsj, helper_idxj, helper_sqrtj, upstream)
