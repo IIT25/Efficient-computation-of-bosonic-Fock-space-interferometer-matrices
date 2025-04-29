@@ -26,7 +26,7 @@ endif()
 find_package(Python 3.12 REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(pybind11 CONFIG REQUIRED)
 
-set(XLA_DIR /home/sooki/permanent-boost/venv/lib/python3.12/site-packages/jaxlib/include)
+set(XLA_DIR C:/Users/erdei/anaconda3/envs/piquasso/Lib/site-packages/jaxlib/include)
 # execute_process(
 #   COMMAND "${Python_EXECUTABLE}"  
 #            "-c" "from jax import ffi; print(ffi.include_dir())"

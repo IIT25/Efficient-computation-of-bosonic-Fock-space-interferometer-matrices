@@ -6,4 +6,6 @@ try:
 except ImportError:
     pass
 
-__all__ = ["__doc__", "__version__", "calc_perm", "get_fock_space_basis", "_get_interferometer_on_fock_space", "registrations"]
+from .interferometer import fs_interferometer_grad, _get_interferometer_on_fock_space_xla, total_size
+
+__all__ = ["__doc__", "__version__", "calc_perm", "total_size", "get_fock_space_basis", "fs_interferometer_grad", "_get_interferometer_on_fock_space_xla", "registrations"]

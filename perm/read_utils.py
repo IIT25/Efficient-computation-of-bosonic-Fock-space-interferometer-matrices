@@ -17,4 +17,10 @@ def read_file(file_name):
          parameters = read_pickle(file_name)   
          parameters_np = np.array(parameters, dtype=np.complex128)    
          return parameters_np
+    elif str(file_name[-4:]) == ".npy":
+                    parameters = np.load(file_name)
+                    if isinstance(parameters, np.ndarray):
+                        return parameters
+                    else:
+                        raise TypeError("Loaded .npy file does not contain a NumPy array.")
           

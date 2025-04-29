@@ -9,11 +9,10 @@
 #include <cuda/std/complex>
 #include <cuda_runtime_api.h>
 
-__global__ void
-calc_perm_fwd_kernel(unsigned long *cutoff_, unsigned long *d_,
-                     cuda::std::complex<double> *interferometer_,
-                     cuda::std::complex<double> *y, unsigned long *y_dims,
-                     int *helper_idx, double *helper_sqrt) {
+__global__ void fs_interferometer_fwd_kernel(
+    unsigned long *cutoff_, unsigned long *d_,
+    cuda::std::complex<double> *interferometer_, cuda::std::complex<double> *y,
+    unsigned long *y_dims, int *helper_idx, double *helper_sqrt) {
   size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
   const size_t grid_stride = blockDim.x * gridDim.x;
   // calc_helper
@@ -137,13 +136,11 @@ calc_perm_fwd_kernel(unsigned long *cutoff_, unsigned long *d_,
   }
 }
 
-ffi::Error calc_perm_fwd_host(cudaStream_t stream, ffi::Buffer<ffi::U64> cutoff,
-                              ffi::Buffer<ffi::U64> d,
-                              ffi::Buffer<ffi::C128> interferometer,
-                              ffi::ResultBuffer<ffi::C128> y,
-                              ffi::ResultBuffer<ffi::U64> y_dims,
-                              ffi::ResultBuffer<ffi::U32> helper_idx,
-                              ffi::ResultBuffer<ffi::F64> helper_sqrt) {
+ffi::Error fs_interferometer_fwd_host(
+    cudaStream_t stream, ffi::Buffer<ffi::U64> cutoff, ffi::Buffer<ffi::U64> d,
+    ffi::Buffer<ffi::C128> interferometer, ffi::ResultBuffer<ffi::C128> y,
+    ffi::ResultBuffer<ffi::U64> y_dims, ffi::ResultBuffer<ffi::U32> helper_idx,
+    ffi::ResultBuffer<ffi::F64> helper_sqrt) {
   const int block_dim = 1;
   const int grid_dim = 1;
   using std::chrono::duration;
@@ -156,7 +153,8 @@ ffi::Error calc_perm_fwd_host(cudaStream_t stream, ffi::Buffer<ffi::U64> cutoff,
   auto t1 = high_resolution_clock::now();
   cudaEventRecord(start);
   cudaMemset(y_dims->typed_data(), 0, 7 * sizeof(unsigned long));
-  calc_perm_fwd_kernel<<<grid_dim, block_dim, /*shared_mem=*/0, stream>>>(
+  fs_interferometer_fwd_kernel<<<grid_dim, block_dim, /*shared_mem=*/0,
+                                 stream>>>(
       cutoff.typed_data(), d.typed_data(),
       reinterpret_cast<cuda::std::complex<double> *>(
           interferometer.typed_data()),
