@@ -6,6 +6,12 @@
 
 namespace ffi = xla::ffi;
 
+ffi::Error fs_interferometer_host(cudaStream_t stream,
+                                  ffi::Buffer<ffi::U64> cutoff,
+                                  ffi::Buffer<ffi::U64> d,
+                                  ffi::Buffer<ffi::C128> interferometer,
+                                  ffi::ResultBuffer<ffi::C128> y);
+
 ffi::Error fs_interferometer_fwd_host(
     cudaStream_t stream, ffi::Buffer<ffi::U64> cutoff, ffi::Buffer<ffi::U64> d,
     ffi::Buffer<ffi::C128> interferometer, ffi::ResultBuffer<ffi::C128> y,

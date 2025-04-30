@@ -4,6 +4,16 @@
 namespace py = pybind11;
 
 XLA_FFI_DEFINE_HANDLER_SYMBOL(
+    fs_interferometer, fs_interferometer_host,
+    ffi::Ffi::Bind()
+        .Ctx<ffi::PlatformStream<cudaStream_t>>() // stream
+        .Arg<ffi::Buffer<ffi::U64>>()
+        .Arg<ffi::Buffer<ffi::U64>>()
+        .Arg<ffi::Buffer<ffi::C128>>()
+        .Ret<ffi::Buffer<ffi::C128>>()         // result
+    {xla::ffi::Traits::kCmdBufferCompatible}); // cudaGraph enabled
+
+XLA_FFI_DEFINE_HANDLER_SYMBOL(
     fs_interferometer_fwd, fs_interferometer_fwd_host,
     ffi::Ffi::Bind()
         .Ctx<ffi::PlatformStream<cudaStream_t>>() // stream
@@ -16,7 +26,6 @@ XLA_FFI_DEFINE_HANDLER_SYMBOL(
         .Ret<ffi::Buffer<ffi::F64>>(),         // helper_sqrt
     {xla::ffi::Traits::kCmdBufferCompatible}); // cudaGraph enabled
 
-// Creates symbol FooBwd with C linkage that can be loaded using Python ctypes
 XLA_FFI_DEFINE_HANDLER_SYMBOL(
     calc_perm_bwd, calc_perm_bwd_host,
     ffi::Ffi::Bind()
@@ -52,6 +61,8 @@ PYBIND11_MODULE(gpu_ops, m) {
       )pbdoc";
   m.def("foo", []() {
     py::dict registrations;
+    registrations["fs_interferometer"] =
+        EncapsulateFfiHandler(fs_interferometer);
     registrations["fs_interferometer_fwd"] =
         EncapsulateFfiHandler(fs_interferometer_fwd);
     registrations["calc_perm_bwd"] = EncapsulateFfiHandler(calc_perm_bwd);

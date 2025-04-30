@@ -55,7 +55,7 @@ def _get_interferometer_on_fock_space_xla(cutoff, d, interferometer):
       
   return jax.lax.platform_dependent(
         cpu=impl("_get_interferometer_on_fock_space_xla"),
-        cuda=impl("calc_perm_fwd")
+        cuda=impl("fs_interferometer")
     )
 
 def _get_interferometer_on_fock_space_fwd(cutoff, d, intf):

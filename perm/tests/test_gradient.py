@@ -83,6 +83,7 @@ def test_backward_1_6_realneg():
     upstream = np.zeros(perm.total_size(interferometer(), 6), dtype=np.complex128)
     for i in range(len(upstream)):
         upstream[i] = (-1.1)*i+0.0j
+    print(upstream)
     grad = perm.fs_interferometer_grad(cutoff, d, interferometer(), upstream)
     validate_backward(cutoff[0], interferometer(),grad, upstream)
 
