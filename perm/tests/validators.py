@@ -123,7 +123,7 @@ def validate_forward(cutoff, interferometer, resj):
     for i in range(len(sub_flattened)):
         assert np.isclose(res_flattened[i], sub_flattened[i])
 
-def validate_backward( cutoff, interferometer, gradj, upstream_buff):
+def validate_backward(cutoff, interferometer, gradj, upstream_buff):
     d = len(interferometer)
     index_tuple = calculate_interferometer_helper_indices(
             d=d, cutoff=cutoff
@@ -134,11 +134,13 @@ def validate_backward( cutoff, interferometer, gradj, upstream_buff):
     sub_flattened = []
     for i in range(len(subspace_representations)):
         sub_flattened = np.concatenate((sub_flattened, subspace_representations[i].ravel()))
-    upstream = subspace_representations
+    upstream = []
     idx = 0
     for i in range(cutoff):
-        for j in range(len(subspace_representations[i])):
-            for k in range(len(subspace_representations[i])):
+        size = len(subspace_representations[i])
+        upstream.append(np.zeros((size, size), dtype=np.complex128))
+        for j in range(size):
+            for k in range(size):
                 upstream[i][j][k] = upstream_buff[idx]
                 idx += 1
     grad = interferometer_gradient(interferometer, subspace_representations, index_tuple, upstream)
