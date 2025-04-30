@@ -1,8 +1,8 @@
 
 import numpy as np
-import perm
+import fs_interferometer
 import pytest
-from perm import _get_interferometer_on_fock_space_xla
+from fs_interferometer import _get_interferometer_on_fock_space_xla
 from validators import validate_forward
 
 
@@ -11,7 +11,7 @@ def test_forward_1_4():
         return np.array([[0.5+0.86603j]])
     cutoff = np.array([4], dtype=np.uint64)
     d = np.array([1], dtype=np.uint64)
-    resj= perm._get_interferometer_on_fock_space_xla(cutoff, d, interferometer())
+    resj= fs_interferometer._get_interferometer_on_fock_space_xla(cutoff, d, interferometer())
     validate_forward(4, interferometer(), resj)
 
 def test_forward_2_3():
@@ -20,7 +20,7 @@ def test_forward_2_3():
        [ 0.35355+0.61237j,  0.70711+0.j     ]])
     cutoff = np.array([3], dtype=np.uint64)
     d = np.array([2], dtype=np.uint64)
-    resj = perm._get_interferometer_on_fock_space_xla(cutoff, d, interferometer())
+    resj = fs_interferometer._get_interferometer_on_fock_space_xla(cutoff, d, interferometer())
     validate_forward(3, interferometer(), resj)
 
 
@@ -67,7 +67,7 @@ def test_forward_5_3():
     )
     cutoff = np.array([3], dtype=np.uint64)
     d = np.array([5], dtype=np.uint64)
-    resj = perm._get_interferometer_on_fock_space_xla(cutoff, d, interferometer())
+    resj = fs_interferometer._get_interferometer_on_fock_space_xla(cutoff, d, interferometer())
     validate_forward(3, interferometer(), resj)
 
 
@@ -76,7 +76,7 @@ def test_forward_1_6():
         return np.array([[0.5+0.86603j]])
     cutoff = np.array([6], dtype=np.uint64)
     d = np.array([1], dtype=np.uint64)
-    resj = perm._get_interferometer_on_fock_space_xla(cutoff, d,  interferometer())
+    resj = fs_interferometer._get_interferometer_on_fock_space_xla(cutoff, d,  interferometer())
     validate_forward(6, interferometer(), resj)
 
 def test_forward_2_6():
@@ -85,7 +85,7 @@ def test_forward_2_6():
        [-0.     -0.5j,  0.86603+0.j ]])
     cutoff = np.array([6], dtype=np.uint64)
     d = np.array([2], dtype=np.uint64)
-    resj = perm._get_interferometer_on_fock_space_xla(cutoff, d,  interferometer())
+    resj = fs_interferometer._get_interferometer_on_fock_space_xla(cutoff, d,  interferometer())
     validate_forward(6, interferometer(), resj)
 
 def test_invalid_interferometer():

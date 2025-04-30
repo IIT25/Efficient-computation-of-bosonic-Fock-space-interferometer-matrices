@@ -1,5 +1,5 @@
-#ifndef CALC_PERM_CPP
-#define CALC_PERM_CPP
+#ifndef CALC_fs_interferometer_CPP
+#define CALC_fs_interferometer_CPP
 
 #include "calc_helper.cpp"
 #include "conversions.cpp"
@@ -23,12 +23,12 @@
 #include <type_traits>
 #include <vector>
 
-std::vector<py::array_t<std::complex<double>>>
-calc_perm(Matrix<std::complex<double>> interferometer,
-          std::tuple<std::vector<Matrix<int>>, std::vector<Matrix<int>>,
-                     std::vector<Matrix<int>>, std::vector<Matrix<double>>,
-                     std::vector<Matrix<double>>>
-              helper_indices) {
+std::vector<py::array_t<std::complex<double>>> calc_fs_interferometer(
+    Matrix<std::complex<double>> interferometer,
+    std::tuple<std::vector<Matrix<int>>, std::vector<Matrix<int>>,
+               std::vector<Matrix<int>>, std::vector<Matrix<double>>,
+               std::vector<Matrix<double>>>
+        helper_indices) {
   // declare, init
   std::vector<Matrix<int>> subspace_indices_array = std::get<0>(helper_indices);
   std::vector<Matrix<int>> first_nonzero_indices_array =
@@ -86,7 +86,7 @@ calc_perm(Matrix<std::complex<double>> interferometer,
   }
   return array_ts;
 }
-void calc_perm_nc(
+void calc_fs_interferometer_nc(
     Matrix<std::complex<double>> interferometer,
     std::tuple<std::vector<Matrix<int>>, std::vector<Matrix<int>>,
                std::vector<Matrix<int>>, std::vector<Matrix<double>>,
@@ -155,7 +155,7 @@ _get_interferometer_on_fock_space(
         interferometer,
     int cutoff) {
   Matrix<std::complex<double>> interf = numpy_to_matrix(interferometer);
-  return calc_perm(
+  return calc_fs_interferometer(
       interf, calculate_interferometer_helper_indices(interf.rows, cutoff));
 }
 std::tuple<std::vector<Matrix<int>>, std::vector<Matrix<int>>,
@@ -169,7 +169,7 @@ _get_interferometer_on_fock_space_nc(
              std::vector<Matrix<double>>>
       helper =
           calculate_interferometer_helper_indices(interferometer.rows, cutoff);
-  calc_perm_nc(interferometer, helper, out, dims);
+  calc_fs_interferometer_nc(interferometer, helper, out, dims);
   return helper;
 }
 #endif

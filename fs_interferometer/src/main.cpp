@@ -1,7 +1,8 @@
+#include "calc_fs_interferometer.cpp"
 #include "calc_helper.cpp"
-#include "calc_perm.cpp"
 #include "jax_utils.cpp"
 #include "matrix.hpp"
+
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
@@ -9,15 +10,15 @@
 PYBIND11_MODULE(_core, m) {
 
   m.doc() = R"pbdoc(
-        Permanent calculator
+        fs_interferometeranent calculator
         -----------------------
 
-        .. currentmodule:: perm
+        .. currentmodule:: fs_interferometer
 
         .. autosummary::
            :toctree: _generate
 
-           calc_perm
+           calc_fs_interferometer
     )pbdoc";
 
   py::class_<Matrix<std::complex<double>>>(m, "Matrix", py::buffer_protocol())
@@ -43,7 +44,8 @@ PYBIND11_MODULE(_core, m) {
   m.def("_get_interferometer_on_fock_space", //
         &_get_interferometer_on_fock_space,
         py::return_value_policy::take_ownership);
-  m.def("calc_perm", &calc_perm, py::return_value_policy::take_ownership,
+  m.def("calc_fs_interferometer", &calc_fs_interferometer,
+        py::return_value_policy::take_ownership,
         R"pbdoc(
         Calculates the subspace representation of the matrix.
 

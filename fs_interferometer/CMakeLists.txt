@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 # Scikit-build-core sets these values for you, or you can just hard-code the
 # name and version. 
 project(
-  perm
+  fs_interferometer
   VERSION ${SKBUILD_PROJECT_VERSION}
   LANGUAGES CXX)
  
@@ -48,7 +48,7 @@ target_link_libraries(_core PRIVATE pybind11::headers)
 # This is passing in the version as a define just as an example
 target_compile_definitions(_core PRIVATE VERSION_INFO=${PROJECT_VERSION})
 # The install directory is the output (wheel) directory
-install(TARGETS _core DESTINATION perm)  
+install(TARGETS _core DESTINATION fs_interferometer)  
 
 if(USE_CUDA)
   include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
@@ -58,5 +58,5 @@ if(USE_CUDA)
     ${CMAKE_CURRENT_LIST_DIR}/src/gpu_ops.cc)
   target_include_directories(gpu_ops PRIVATE ${XLA_DIR})
 
-  install(TARGETS gpu_ops DESTINATION perm)
+  install(TARGETS gpu_ops DESTINATION fs_interferometer)
 endif()

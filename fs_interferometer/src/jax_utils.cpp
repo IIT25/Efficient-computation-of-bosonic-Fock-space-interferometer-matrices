@@ -1,7 +1,7 @@
 #ifndef JAX_UTILS_CPP
 #define JAX_UTILS_CPP
 
-#include "calc_perm.cpp"
+#include "calc_fs_interferometer.cpp"
 #include "matrix.hpp"
 
 #include "xla/ffi/api/c_api.h"
@@ -201,33 +201,41 @@ ffi::Error _get_interferometer_on_fock_space_bwd_impl(
   int c_idx = 0;
   int c_sqrt_idx = 0;
   for (int i = 2; i < totalSize_y_dim; i++) {
+    size_t si_size = y_dim.typed_data()[i] * interferometerc.rows;
+    size_t fni_size = y_dim.typed_data()[i];
+    size_t fsi_size = y_dim.typed_data()[i];
+    size_t son_size = y_dim.typed_data()[i] * interferometerc.rows;
+    size_t sfon_size = y_dim.typed_data()[i];
+
     Matrix<int> si = Matrix<int>(
         y_dim.typed_data()[i], interferometerc.rows,
         (reinterpret_cast<int *>(&(helper_idx.typed_data()[c_idx]))));
-    c_idx += y_dim.typed_data()[i] * interferometerc.rows;
     subspace_index_tensor.push_back(si);
+    c_idx += si_size;
 
     Matrix<int> fni = Matrix<int>(
         1, y_dim.typed_data()[i],
         (reinterpret_cast<int *>(&(helper_idx.typed_data()[c_idx]))));
     first_nonzero_index_tensor.push_back(fni);
-    c_idx += y_dim.typed_data()[i];
+    c_idx += fni_size;
+
     Matrix<int> fsi = Matrix<int>(
         1, y_dim.typed_data()[i],
         (reinterpret_cast<int *>(&(helper_idx.typed_data()[c_idx]))));
     first_subspace_index_tensor.push_back(fsi);
-    c_idx += y_dim.typed_data()[i];
+    c_idx += fsi_size;
+
     Matrix<double> son = Matrix<double>(
         y_dim.typed_data()[i], interferometerc.rows,
         (reinterpret_cast<double *>(&(helper_sqrt.typed_data()[c_sqrt_idx]))));
     sqrt_occupation_numbers_tensor.push_back(son);
-    c_sqrt_idx += y_dim.typed_data()[i] * interferometerc.rows;
+    c_sqrt_idx += son_size;
+
     Matrix<double> sfon = Matrix<double>(
         1, y_dim.typed_data()[i],
         (reinterpret_cast<double *>(&(helper_sqrt.typed_data()[c_sqrt_idx]))));
     sqrt_first_occupation_numbers_tensor.push_back(sfon);
-    c_sqrt_idx += y_dim.typed_data()[i];
-    result->typed_data()[i] = subspace_index_tensor[0][i]; // MOVE
+    c_sqrt_idx += sfon_size;
   }
   // unwrap representations and upstream
   int result_start_idx = 0;

@@ -1,18 +1,18 @@
 import jax
 import math
 from functools import partial
-import perm
+import fs_interferometer
 import jax.numpy as np
 
 
 jax.config.update("jax_enable_x64", True)
 
-for name, target in perm.registrations().items():
+for name, target in fs_interferometer.registrations().items():
       jax.ffi.register_ffi_target(name, target)
 
-if hasattr(perm, "gpu_ops"):
+if hasattr(fs_interferometer, "gpu_ops"):
   try:
-    for name, target in perm.gpu_ops.foo().items():
+    for name, target in fs_interferometer.gpu_ops.foo().items():
         jax.ffi.register_ffi_target(name, target, platform="cuda")
   except(ImportError):
     pass
@@ -73,7 +73,7 @@ def _get_interferometer_on_fock_space_fwd(cutoff, d, intf):
       
   resj, dimsj, helper_idxj, helper_sqrtj =  jax.lax.platform_dependent(
         cpu=impl("_get_interferometer_on_fock_space_fwd"),
-        cuda=impl("calc_perm_fwd")
+        cuda=impl("calc_fs_interferometer_fwd")
     )
   return resj, dimsj, helper_idxj, helper_sqrtj
 def _get_interferometer_on_fock_space_bwd(cutoff, interferometer, d, res, dims, helper_idx, helper_sqrt, upstream):
@@ -86,7 +86,7 @@ def _get_interferometer_on_fock_space_bwd(cutoff, interferometer, d, res, dims, 
     
   return jax.lax.platform_dependent(
           cpu=impl("_get_interferometer_on_fock_space_bwd"),
-          cuda=impl("calc_perm_bwd")
+          cuda=impl("calc_fs_interferometer_bwd")
         )
 
 def fs_interferometer_grad(cutoff, d, interferometer, upstream):

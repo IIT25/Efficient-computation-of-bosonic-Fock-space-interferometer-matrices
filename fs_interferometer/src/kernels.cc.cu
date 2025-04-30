@@ -322,13 +322,12 @@ ffi::Error fs_interferometer_fwd_host(
   return ffi::Error::Success();
 }
 
-__global__ void
-calc_perm_bwd_kernel(cuda::std::complex<double> *interferometer_,
-                     const int *cutoff_, const int *d_,
-                     cuda::std::complex<double> *y_, unsigned long *y_dims_,
-                     int *helper_idx_, double *helper_sqrt_,
-                     cuda::std::complex<double> *upstream_buff_,
-                     cuda::std::complex<double> *result) {
+__global__ void calc_fs_interferometer_bwd_kernel(
+    cuda::std::complex<double> *interferometer_, const int *cutoff_,
+    const int *d_, cuda::std::complex<double> *y_, unsigned long *y_dims_,
+    int *helper_idx_, double *helper_sqrt_,
+    cuda::std::complex<double> *upstream_buff_,
+    cuda::std::complex<double> *result) {
   size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
   const size_t grid_stride = blockDim.x * gridDim.x;
   // unwrap buffers
@@ -411,17 +410,16 @@ calc_perm_bwd_kernel(cuda::std::complex<double> *interferometer_,
     result[i] = full_kl_grad[i];
   }
 }
-ffi::Error calc_perm_bwd_host(cudaStream_t stream, ffi::Buffer<ffi::U64> cutoff,
-                              ffi::Buffer<ffi::C128> interferometer,
-                              ffi::Buffer<ffi::U64> d, ffi::Buffer<ffi::C128> y,
-                              ffi::Buffer<ffi::U64> y_dim,
-                              ffi::Buffer<ffi::U32> helper_idx,
-                              ffi::Buffer<ffi::F64> helper_sqrt,
-                              ffi::Buffer<ffi::C128> upstream_buff,
-                              ffi::ResultBuffer<ffi::C128> result) {
+ffi::Error calc_fs_interferometer_bwd_host(
+    cudaStream_t stream, ffi::Buffer<ffi::U64> cutoff,
+    ffi::Buffer<ffi::C128> interferometer, ffi::Buffer<ffi::U64> d,
+    ffi::Buffer<ffi::C128> y, ffi::Buffer<ffi::U64> y_dim,
+    ffi::Buffer<ffi::U32> helper_idx, ffi::Buffer<ffi::F64> helper_sqrt,
+    ffi::Buffer<ffi::C128> upstream_buff, ffi::ResultBuffer<ffi::C128> result) {
   const int block_dim = 1;
   const int grid_dim = 1;
-  calc_perm_bwd_kernel<<<grid_dim, block_dim, /*shared_mem=*/0, stream>>>(
+  calc_fs_interferometer_bwd_kernel<<<grid_dim, block_dim, /*shared_mem=*/0,
+                                      stream>>>(
       reinterpret_cast<cuda::std::complex<double> *>(
           interferometer.typed_data()),
       reinterpret_cast<const int *>(cutoff.typed_data()),

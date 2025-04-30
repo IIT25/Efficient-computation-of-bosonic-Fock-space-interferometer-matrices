@@ -2,11 +2,11 @@ from functools import partial
 import numpy as np
 import jax
 import jax.numpy as jnp
-import perm
+import fs_interferometer
 
 jax.config.update("jax_enable_x64", True)
 
-for name, target in perm.gpu_ops.foo().items():
+for name, target in fs_interferometer.gpu_ops.foo().items():
     print(name, target)
     jax.ffi.register_ffi_target(name, target, platform="CUDA")
 

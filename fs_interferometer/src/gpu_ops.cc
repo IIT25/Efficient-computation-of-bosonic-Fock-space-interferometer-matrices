@@ -10,7 +10,7 @@ XLA_FFI_DEFINE_HANDLER_SYMBOL(
         .Arg<ffi::Buffer<ffi::U64>>()
         .Arg<ffi::Buffer<ffi::U64>>()
         .Arg<ffi::Buffer<ffi::C128>>()
-        .Ret<ffi::Buffer<ffi::C128>>()         // result
+        .Ret<ffi::Buffer<ffi::C128>>(),        // result
     {xla::ffi::Traits::kCmdBufferCompatible}); // cudaGraph enabled
 
 XLA_FFI_DEFINE_HANDLER_SYMBOL(
@@ -27,7 +27,7 @@ XLA_FFI_DEFINE_HANDLER_SYMBOL(
     {xla::ffi::Traits::kCmdBufferCompatible}); // cudaGraph enabled
 
 XLA_FFI_DEFINE_HANDLER_SYMBOL(
-    calc_perm_bwd, calc_perm_bwd_host,
+    calc_fs_interferometer_bwd, calc_fs_interferometer_bwd_host,
     ffi::Ffi::Bind()
         .Ctx<ffi::PlatformStream<cudaStream_t>>() // stream
         .Arg<ffi::Buffer<ffi::U64>>()
@@ -49,7 +49,7 @@ template <typename T> py::capsule EncapsulateFfiHandler(T *fn) {
 
 PYBIND11_MODULE(gpu_ops, m) {
   m.doc() = R"pbdoc(
-          Permanent calculator plugin
+          fs_interferometeranent calculator plugin
           -----------------------
   
           .. currentmodule:: scikit_build_example
@@ -57,7 +57,7 @@ PYBIND11_MODULE(gpu_ops, m) {
           .. autosummary::
              :toctree: _generate
   
-             permanent
+             fs_interferometeranent
       )pbdoc";
   m.def("foo", []() {
     py::dict registrations;
@@ -65,7 +65,8 @@ PYBIND11_MODULE(gpu_ops, m) {
         EncapsulateFfiHandler(fs_interferometer);
     registrations["fs_interferometer_fwd"] =
         EncapsulateFfiHandler(fs_interferometer_fwd);
-    registrations["calc_perm_bwd"] = EncapsulateFfiHandler(calc_perm_bwd);
+    registrations["calc_fs_interferometer_bwd"] =
+        EncapsulateFfiHandler(calc_fs_interferometer_bwd);
     // todo
     return registrations;
   });
