@@ -67,7 +67,6 @@ PYBIND11_MODULE(gpu_ops, m) {
         EncapsulateFfiHandler(fs_interferometer_fwd);
     registrations["calc_fs_interferometer_bwd"] =
         EncapsulateFfiHandler(calc_fs_interferometer_bwd);
-    // todo
     return registrations;
   });
   m.attr("__version__") = "dev";

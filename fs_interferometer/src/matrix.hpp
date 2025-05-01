@@ -93,11 +93,6 @@ public:
     if (call_delete && owner)
       delete[] data;
   }
-  void printdim() {
-    std::cout << std::endl
-              << "The stored matrix (" << rows << " x " << cols
-              << "):" << std::endl;
-  }
   HOST_DEVICE void print_complex() {
     printf("The stored matrix (%zu x %zu):\n", rows, cols);
     /*std::cout << std::endl
@@ -152,38 +147,19 @@ public:
   }
   HOST_DEVICE Matrix<Tscalar> rowidx(size_t idx) { //
     Matrix<Tscalar> matrix_copy(1, cols);
-    /*if (idx >= rows) {
-      std::cout << "rowindx operator  cols:" << cols << " rows: " << rows
-                << " idx: " << idx << "\n";
-    }*/
     memcpy(matrix_copy.data, data + idx * stride, cols * sizeof(Tscalar));
 
     return matrix_copy;
   }
   HOST_DEVICE void rowidxR(size_t idx, Matrix<Tscalar> *out) { //
     *out = Matrix<Tscalar>(1, cols, data + idx * stride);
-    /*if (idx >= rows) {
-      std::cout << "rowindxR operator  cols:" << cols << " rows: " << rows
-                << " idx: " << idx << "\n";
-    }*/
   }
 
   HOST_DEVICE Matrix<Tscalar> rowsliceR(size_t start, size_t end) {
     Matrix matrix_copy(end - start, cols, data + (start * stride));
-    /*if (end >= rows) {
-      std::cout << "rowsliceR operator  cols:" << cols << " rows: " << rows
-                << " end idx: " << end << std::endl;
-    }*/
-
     return matrix_copy;
   }
-  HOST_DEVICE Tscalar &operator[](size_t idx) {
-    /*if (idx >= size()) {
-      std::cout << "[] operator  cols:" << cols << " rows: " << rows
-                << " idx: " << idx << "\n";
-    }*/
-    return data[idx];
-  }
+  HOST_DEVICE Tscalar &operator[](size_t idx) { return data[idx]; }
   HOST_DEVICE Matrix *operator[](Matrix<int> idx) {
     Matrix *r;
     if (rows == 1) {
@@ -208,10 +184,6 @@ public:
     return data[row * stride + col];
   }
   HOST_DEVICE void iota(Tscalar start) {
-    /*if (data == nullptr) {
-      std::cout << "Nullpointer for data" << std::endl;
-      return;
-    }*/
     for (size_t i = 0; i < rows; i++) {
       for (size_t j = 0; j < cols; j++) {
         *(data + j + i * stride) = start + j + i * stride;
@@ -219,7 +191,7 @@ public:
     }
   }
 
-  void sqrt(Matrix<double> out) {
+  void sqrt(Matrix<double> &out) {
     for (size_t i = 0; i < rows; i++) {
       for (size_t j = 0; j < cols; j++) {
         *(out.data + j + i * stride) = std::sqrt(*(data + j + i * stride));

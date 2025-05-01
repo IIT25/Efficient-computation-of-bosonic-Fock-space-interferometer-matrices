@@ -126,11 +126,9 @@ calculate_interferometer_helper_indices(int d, int cutoff) {
 
   for (size_t i = 0; i < space.rows; i++) {
     Matrix<int> current_basis = space.rowidx(i);
-    // TODO funky
     Matrix<double> sqrt_source;
     sqrt_space.rowidxR(i, &sqrt_source);
     current_basis.sqrt(sqrt_source);
-    // funky
     bool found_first = false;
     for (size_t j = 0; j < d; j++) {
       current_basis[j] -= 1;
