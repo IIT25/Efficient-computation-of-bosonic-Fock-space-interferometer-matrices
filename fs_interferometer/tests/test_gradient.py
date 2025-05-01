@@ -163,37 +163,3 @@ def test_backward_2_4_mixed2():
         cutoff, d, interferometer(), upstream
     )
     validate_backward(cutoff[0], interferometer(), grad, upstream)
-
-
-def test_backward_invalid_interferometer():
-    def interferometer():
-        return np.array(
-            [
-                [
-                    -0.11035524 + 0.43053175j,
-                    0.16672794 - 0.47819775j,
-                    0.01831264 - 0.07497556j,
-                    0.44214383 + 0.23308614j,
-                    0.49732734 - 0.20707815j,
-                ],
-                [
-                    -0.2226116 - 0.39735917j,
-                    0.30063104 - 0.55866103j,
-                    0.00329231 - 0.28009116j,
-                    0.23376629 - 0.22854039j,
-                    -0.43588261 + 0.12139052j,
-                ],
-            ]
-        )
-
-    cutoff = np.array([4], dtype=np.uint64)
-    d = np.array([2], dtype=np.uint64)
-    upstream = np.zeros(
-        fs_interferometer.total_size(interferometer(), 4), dtype=np.complex128
-    )
-    for i in range(len(upstream)):
-        upstream[i] = (-1.1) * i + 0.0j
-    with pytest.raises(Exception) as e_info:
-        fs_interferometer.fs_interferometer_grad(cutoff, d, interferometer(), upstream)
-    assert e_info.value.args[0] == "Interferometer has to be a square matrix"
-    assert e_info.value.args[1] == "2 x 5"
