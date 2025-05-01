@@ -9,9 +9,8 @@ project(
   VERSION ${SKBUILD_PROJECT_VERSION}
   LANGUAGES CXX)
  
-include(CheckLanguage)
-check_language(CUDA)
-if(CMAKE_CUDA_COMPILER)
+find_package(CUDAToolkit)
+if(CUDAToolkit_FOUND)
   enable_language(CUDA)
   set(USE_CUDA ON)
   message(STATUS "CUDA enabled")
@@ -23,14 +22,14 @@ endif()
 # scikit-build-core's built-in backport)
 #set(Python_FIND_VIRTUALENV FIRST)
 
-find_package(Python 3.12 REQUIRED COMPONENTS Interpreter Development.Module)
+find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(pybind11 CONFIG REQUIRED)
 
-set(XLA_DIR C:/Users/erdei/anaconda3/envs/piquasso/Lib/site-packages/jaxlib/include)
-# execute_process(
-#   COMMAND "${Python_EXECUTABLE}"  
-#            "-c" "from jax import ffi; print(ffi.include_dir())"
-#   OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE XLA_DIR)
+#set(XLA_DIR C:/Users/erdei/anaconda3/envs/piquasso/Lib/site-packages/jaxlib/include)
+execute_process(
+  COMMAND "${Python_EXECUTABLE}"  
+           "-c" "from jax import ffi; print(ffi.include_dir())"
+  OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE XLA_DIR)
 message(STATUS "XLA include directory: ${XLA_DIR}")
 
 
