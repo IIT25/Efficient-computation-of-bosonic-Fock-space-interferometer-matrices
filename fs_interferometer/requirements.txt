@@ -1,5 +1,7 @@
+jax>=0.4.29
+jaxlib>=0.4.29
+scikit-build-core>=0.3.3
 numpy
-jax
 pybind11
 pytest
 piquasso
