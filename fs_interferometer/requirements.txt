@@ -1,0 +1,5 @@
+numpy
+jax
+pybind11
+pytest
+piquasso
