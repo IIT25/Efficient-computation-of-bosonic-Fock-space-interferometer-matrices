@@ -3,28 +3,48 @@ import fs_interferometer
 import pytest
 from validators import validate_backward
 import numpy as np
-    
+import jax
+
+jax.config.update("jax_platform_name", "gpu")
+
 
 def test_backward_2_3_ones():
     def interferometer():
-        return np.array([[ 0.70711+0.j     , -0.35355+0.61237j], 
-       [ 0.35355+0.61237j,  0.70711+0.j     ]], dtype= np.complex128)
+        return np.array(
+            [
+                [0.70711 + 0.0j, -0.35355 + 0.61237j],
+                [0.35355 + 0.61237j, 0.70711 + 0.0j],
+            ],
+            dtype=np.complex128,
+        )
+
     cutoff = np.array([3], dtype=np.uint64)
     d = np.array([2], dtype=np.uint64)
-    upstream = np.ones(fs_interferometer.total_size(interferometer(), 3), dtype=np.complex128)
-    grad = fs_interferometer.fs_interferometer_grad(cutoff, d, interferometer(), upstream)
-    validate_backward(cutoff[0], interferometer(),grad, upstream)
+    upstream = np.ones(
+        fs_interferometer.total_size(interferometer(), 3), dtype=np.complex128
+    )
+    grad = fs_interferometer.fs_interferometer_grad(
+        cutoff, d, interferometer(), upstream
+    )
+    validate_backward(cutoff[0], interferometer(), grad, upstream)
+
 
 def test_backward_1_3_pimag():
     def interferometer():
-        return np.array([[0.5+0.86603j]], dtype=np.complex128)
+        return np.array([[0.5 + 0.86603j]], dtype=np.complex128)
+
     cutoff = np.array([3], dtype=np.uint64)
     d = np.array([1], dtype=np.uint64)
-    upstream = np.zeros(fs_interferometer.total_size(interferometer(), 3), dtype=np.complex128)
+    upstream = np.zeros(
+        fs_interferometer.total_size(interferometer(), 3), dtype=np.complex128
+    )
     for i in range(len(upstream)):
-        upstream[i] = 0.0+(i*1.1j)
-    grad = fs_interferometer.fs_interferometer_grad(cutoff, d, interferometer(), upstream)
-    validate_backward(cutoff[0], interferometer(),grad, upstream)
+        upstream[i] = 0.0 + (i * 1.1j)
+    grad = fs_interferometer.fs_interferometer_grad(
+        cutoff, d, interferometer(), upstream
+    )
+    validate_backward(cutoff[0], interferometer(), grad, upstream)
+
 
 def test_backward_5_4_pimag():
     def interferometer():
@@ -65,56 +85,84 @@ def test_backward_5_4_pimag():
                     -0.07509227 + 0.08557502j,
                     -0.12237335 - 0.42143858j,
                 ],
-            ], dtype=np.complex128
-    )
+            ],
+            dtype=np.complex128,
+        )
+
     cutoff = np.array([4], dtype=np.uint64)
     d = np.array([5], dtype=np.uint64)
-    upstream = np.zeros(fs_interferometer.total_size(interferometer(), 4), dtype=np.complex128)
+    upstream = np.zeros(
+        fs_interferometer.total_size(interferometer(), 4), dtype=np.complex128
+    )
     for i in range(len(upstream)):
-        upstream[i] = 0.0+(i*1.1j)
-    grad = fs_interferometer.fs_interferometer_grad(cutoff, d, interferometer(), upstream)
-    validate_backward(cutoff[0], interferometer(),grad, upstream)
+        upstream[i] = 0.0 + (i * 1.1j)
+    grad = fs_interferometer.fs_interferometer_grad(
+        cutoff, d, interferometer(), upstream
+    )
+    validate_backward(cutoff[0], interferometer(), grad, upstream)
+
 
 def test_backward_1_6_realneg():
     def interferometer():
-        return np.array([[0.5+0.86603j]], dtype=np.complex128)
+        return np.array([[0.5 + 0.86603j]], dtype=np.complex128)
+
     cutoff = np.array([6], dtype=np.uint64)
     d = np.array([1], dtype=np.uint64)
-    upstream = np.zeros(fs_interferometer.total_size(interferometer(), 6), dtype=np.complex128)
+    upstream = np.zeros(
+        fs_interferometer.total_size(interferometer(), 6), dtype=np.complex128
+    )
     for i in range(len(upstream)):
-        upstream[i] = (-1.1)*i+0.0j
+        upstream[i] = (-1.1) * i + 0.0j
     print(upstream)
-    grad = fs_interferometer.fs_interferometer_grad(cutoff, d, interferometer(), upstream)
-    validate_backward(cutoff[0], interferometer(),grad, upstream)
+    grad = fs_interferometer.fs_interferometer_grad(
+        cutoff, d, interferometer(), upstream
+    )
+    validate_backward(cutoff[0], interferometer(), grad, upstream)
+
 
 def test_backward_2_6_mixed1():
     def interferometer():
-        return np.array([[ 0.86603+0.j ,  0.     -0.5j],
-       [-0.     -0.5j,  0.86603+0.j ]], dtype=np.complex128)
+        return np.array(
+            [[0.86603 + 0.0j, 0.0 - 0.5j], [-0.0 - 0.5j, 0.86603 + 0.0j]],
+            dtype=np.complex128,
+        )
+
     cutoff = np.array([6], dtype=np.uint64)
     d = np.array([2], dtype=np.uint64)
-    upstream = np.zeros(fs_interferometer.total_size(interferometer(), 6), dtype=np.complex128)
+    upstream = np.zeros(
+        fs_interferometer.total_size(interferometer(), 6), dtype=np.complex128
+    )
     for i in range(len(upstream)):
-        upstream[i] = i*(-1.1)+(i % 2)*0.9j
+        upstream[i] = i * (-1.1) + (i % 2) * 0.9j
         if i % 3 == 0:
             upstream[i] *= -1.0
     print(upstream)
-    grad = fs_interferometer.fs_interferometer_grad(cutoff, d, interferometer(), upstream)
-    validate_backward(cutoff[0], interferometer(),grad, upstream)
+    grad = fs_interferometer.fs_interferometer_grad(
+        cutoff, d, interferometer(), upstream
+    )
+    validate_backward(cutoff[0], interferometer(), grad, upstream)
+
 
 def test_backward_2_4_mixed2():
     def interferometer():
-        return np.array([[ 0.86603+0.j ,  0.     -0.5j],
-       [-0.     -0.5j,  0.86603+0.j ]], dtype=np.complex128)
+        return np.array(
+            [[0.86603 + 0.0j, 0.0 - 0.5j], [-0.0 - 0.5j, 0.86603 + 0.0j]],
+            dtype=np.complex128,
+        )
+
     cutoff = np.array([4], dtype=np.uint64)
     d = np.array([2], dtype=np.uint64)
-    upstream = np.zeros(fs_interferometer.total_size(interferometer(), 4), dtype=np.complex128)
+    upstream = np.zeros(
+        fs_interferometer.total_size(interferometer(), 4), dtype=np.complex128
+    )
     for i in range(len(upstream)):
-        upstream[i] = i*(-1.1)+(i % 2)*0.9j
+        upstream[i] = i * (-1.1) + (i % 2) * 0.9j
         if i % 3 == 0:
             upstream[i] *= -1.0
-    grad = fs_interferometer.fs_interferometer_grad(cutoff, d, interferometer(), upstream)
-    validate_backward(cutoff[0], interferometer(),grad, upstream)
+    grad = fs_interferometer.fs_interferometer_grad(
+        cutoff, d, interferometer(), upstream
+    )
+    validate_backward(cutoff[0], interferometer(), grad, upstream)
 
 
 def test_backward_invalid_interferometer():
@@ -134,13 +182,18 @@ def test_backward_invalid_interferometer():
                     0.00329231 - 0.28009116j,
                     0.23376629 - 0.22854039j,
                     -0.43588261 + 0.12139052j,
-                ]])
+                ],
+            ]
+        )
+
     cutoff = np.array([4], dtype=np.uint64)
     d = np.array([2], dtype=np.uint64)
-    upstream = np.zeros(fs_interferometer.total_size(interferometer(), 4), dtype=np.complex128)
+    upstream = np.zeros(
+        fs_interferometer.total_size(interferometer(), 4), dtype=np.complex128
+    )
     for i in range(len(upstream)):
-        upstream[i] = (-1.1)*i+0.0j
+        upstream[i] = (-1.1) * i + 0.0j
     with pytest.raises(Exception) as e_info:
         fs_interferometer.fs_interferometer_grad(cutoff, d, interferometer(), upstream)
-    assert(e_info.value.args[0] == "Interferometer has to be a square matrix")
-    assert(e_info.value.args[1] == "2 x 5")
+    assert e_info.value.args[0] == "Interferometer has to be a square matrix"
+    assert e_info.value.args[1] == "2 x 5"
