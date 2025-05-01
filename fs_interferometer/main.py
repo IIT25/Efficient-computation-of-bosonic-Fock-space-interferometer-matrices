@@ -108,10 +108,10 @@ scrollable_frame.bind(
 
 
 def show_upstream():
-    if int(grad.get()) == 0:
-        for inp in created_inputs:
-            inp.destroy()
-    else:
+    for inp in created_inputs:
+        inp.destroy()
+    created_inputs.clear()
+    if int(grad.get()) == 1:
         l = tk.Label(
             gradient_frame,
             font=subtitle_font,
@@ -171,7 +171,9 @@ def show_result_fields():
         return
 
     if bwd:
-        print(created_inputs)
+        if len(created_inputs) < 2:
+            open_popup("Please provide an upstream file path.")
+            return
         upstream_path = created_inputs[1].get()
         upstream = read_file(upstream_path)
         resj, dimsj, helper_idxj, helper_sqrtj = _get_interferometer_on_fock_space_fwd(
