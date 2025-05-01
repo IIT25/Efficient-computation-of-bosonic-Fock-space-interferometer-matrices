@@ -25,13 +25,10 @@ endif()
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(pybind11 CONFIG REQUIRED)
 
-#set(XLA_DIR C:/Users/erdei/anaconda3/envs/piquasso/Lib/site-packages/jaxlib/include)
 execute_process(
-  COMMAND "${Python_EXECUTABLE}"  
-           "-c" "from jax import ffi; print(ffi.include_dir())"
+  COMMAND ${Python_EXECUTABLE} -c "import site; print(site.getsitepackages()[0] + '/jaxlib/include')"
   OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE XLA_DIR)
 message(STATUS "XLA include directory: ${XLA_DIR}")
-
 
 # Add a library using FindPython's tooling (pybind11 also provides a helper like
 # this)
