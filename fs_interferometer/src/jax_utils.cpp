@@ -33,9 +33,11 @@ namespace ffi = xla::ffi;
 // function returns the total number of elements in the buffer, and the size of
 // the last dimension.
 template <ffi::DataType T>
-std::pair<size_t, size_t> GetDims(const ffi::Buffer<T> &buffer) {
+std::pair<size_t, size_t> GetDims(const ffi::Buffer<T> &buffer)
+{
   auto dims = buffer.dimensions();
-  if (dims.size() == 0) {
+  if (dims.size() == 0)
+  {
     return std::make_pair(0, 0);
   }
   return std::make_pair(buffer.element_count(), dims.back());
@@ -43,7 +45,8 @@ std::pair<size_t, size_t> GetDims(const ffi::Buffer<T> &buffer) {
 
 ffi::Error _get_interferometer_on_fock_space_Impl(
     ffi ::Buffer<ffi::U64> cutoff, ffi::Buffer<ffi::U64> d_,
-    ffi::Buffer<ffi::C128> interferometer, ffi::ResultBuffer<ffi::C128> y) {
+    ffi::Buffer<ffi::C128> interferometer, ffi::ResultBuffer<ffi::C128> y)
+{
   int d = d_.typed_data()[0];
   Matrix<std::complex<double>> interferometerc =
       Matrix<std::complex<double>>(d, d, &(interferometer.typed_data()[0]));
@@ -53,13 +56,14 @@ ffi::Error _get_interferometer_on_fock_space_Impl(
   _get_interferometer_on_fock_space_nc(interferometerc, cutoff.typed_data()[0],
                                        res, dims);
   ;
-  for (size_t i = 0; i < res.size(); i++) {
+  for (size_t i = 0; i < res.size(); i++)
+  {
     y->typed_data()[i] = res[i];
   }
   return ffi::Error::Success();
 }
 
-XLA_FFI_DEFINE_HANDLER_SYMBOL(_get_interferometer_on_fock_space_xla,
+XLA_FFI_DEFINE_HANDLER_SYMBOL(fs_interferometer_cpu,
                               _get_interferometer_on_fock_space_Impl,
                               ffi::Ffi::Bind()
                                   .Arg<ffi::Buffer<ffi::U64>>()
@@ -70,7 +74,8 @@ ffi::Error _get_interferometer_on_fock_space_fwd_impl(
     ffi::Buffer<ffi::U64> cutoff, ffi::Buffer<ffi::U64> d,
     ffi::Buffer<ffi::C128> interferometer, ffi::ResultBuffer<ffi::C128> y,
     ffi::ResultBuffer<ffi::U64> y_dims, ffi::ResultBuffer<ffi::U32> helper_idx,
-    ffi::ResultBuffer<ffi::F64> helper_sqrt) {
+    ffi::ResultBuffer<ffi::F64> helper_sqrt)
+{
   auto [totalSize, lastDim] = GetDims(interferometer);
   Matrix<std::complex<double>> interferometerc = Matrix<std::complex<double>>(
       totalSize / lastDim, lastDim, &(interferometer.typed_data()[0]));
@@ -83,10 +88,12 @@ ffi::Error _get_interferometer_on_fock_space_fwd_impl(
       helper_indices = _get_interferometer_on_fock_space_nc(
           interferometerc, cutoff.typed_data()[0], res, dims);
   ;
-  for (size_t i = 0; i < res.size(); i++) {
+  for (size_t i = 0; i < res.size(); i++)
+  {
     y->typed_data()[i] = res[i];
   }
-  for (int i = 0; i < cutoff.typed_data()[0]; i++) {
+  for (int i = 0; i < cutoff.typed_data()[0]; i++)
+  {
     y_dims->typed_data()[i] = dims[i];
   }
   std::vector<Matrix<int>> subspace_indices_array = std::get<0>(helper_indices);
@@ -100,24 +107,29 @@ ffi::Error _get_interferometer_on_fock_space_fwd_impl(
       std::get<4>(helper_indices);
   int current_idx = 0;
   int current_sqrt_idx = 0;
-  for (int i = 0; i < cutoff.typed_data()[0] - 2; i++) {
-    for (int j = 0; j < subspace_indices_array[i].size(); j++) {
+  for (int i = 0; i < cutoff.typed_data()[0] - 2; i++)
+  {
+    for (int j = 0; j < subspace_indices_array[i].size(); j++)
+    {
       helper_idx->typed_data()[current_idx] = subspace_indices_array[i][j];
       helper_sqrt->typed_data()[current_sqrt_idx] =
           sqrt_occupation_numbers_array[i][j];
       current_sqrt_idx += 1;
       current_idx += 1;
     }
-    for (int j = 0; j < first_nonzero_indices_array[i].size(); j++) {
+    for (int j = 0; j < first_nonzero_indices_array[i].size(); j++)
+    {
       helper_idx->typed_data()[current_idx] = first_nonzero_indices_array[i][j];
       current_idx += 1;
     }
-    for (int j = 0; j < first_subspace_indices_array[i].size(); j++) {
+    for (int j = 0; j < first_subspace_indices_array[i].size(); j++)
+    {
       helper_idx->typed_data()[current_idx] =
           first_subspace_indices_array[i][j];
       current_idx += 1;
     }
-    for (int j = 0; j < sqrt_first_occupation_numbers_array[i].size(); j++) {
+    for (int j = 0; j < sqrt_first_occupation_numbers_array[i].size(); j++)
+    {
       helper_sqrt->typed_data()[current_sqrt_idx] =
           sqrt_first_occupation_numbers_array[i][j];
       current_sqrt_idx += 1;
@@ -145,14 +157,18 @@ Matrix<std::complex<double>> _calculate_subspace_grad(
     Matrix<int> first_nonzero_indices, Matrix<double> sqrt_occupation_numbers,
     Matrix<double> sqrt_first_occupation_numbers,
     Matrix<std::complex<double>> interferometer,
-    Matrix<std::complex<double>> previous_subspace_grad) {
+    Matrix<std::complex<double>> previous_subspace_grad)
+{
   int matrix_dim = sqrt_occupation_numbers.rows;
   Matrix<std::complex<double>> subspace_grad =
       Matrix<std::complex<double>>(matrix_dim, matrix_dim);
-  for (int jdx = 0; jdx < matrix_dim; jdx++) {
-    for (int idx = 0; idx < first_nonzero_indices.cols; idx++) {
+  for (int jdx = 0; jdx < matrix_dim; jdx++)
+  {
+    for (int idx = 0; idx < first_nonzero_indices.cols; idx++)
+    {
       int first_nonzero_index = first_nonzero_indices[idx];
-      if (first_nonzero_index != row_index) {
+      if (first_nonzero_index != row_index)
+      {
         continue;
       }
       subspace_grad(idx, jdx) +=
@@ -160,8 +176,10 @@ Matrix<std::complex<double>> _calculate_subspace_grad(
                                            subspace_indices(jdx, col_index)) *
           sqrt_occupation_numbers(jdx, col_index);
     }
-    for (int idx = 0; idx < matrix_dim; idx++) {
-      for (int kdx = 0; kdx < sqrt_occupation_numbers.cols; kdx++) {
+    for (int idx = 0; idx < matrix_dim; idx++)
+    {
+      for (int kdx = 0; kdx < sqrt_occupation_numbers.cols; kdx++)
+      {
         subspace_grad(idx, jdx) +=
             sqrt_occupation_numbers(jdx, kdx) *
             interferometer(first_nonzero_indices[idx], kdx) *
@@ -178,7 +196,8 @@ ffi::Error _get_interferometer_on_fock_space_bwd_impl(
     ffi::Buffer<ffi::U64> d_, ffi::Buffer<ffi::C128> y,
     ffi::Buffer<ffi::U64> y_dim, ffi::Buffer<ffi::U32> helper_idx,
     ffi::Buffer<ffi::F64> helper_sqrt, ffi::Buffer<ffi::C128> upstream_buff,
-    ffi::ResultBuffer<ffi::C128> result) {
+    ffi::ResultBuffer<ffi::C128> result)
+{
   // unwrap helper_idx, helper_sqrt
   std::vector<Matrix<int>> subspace_index_tensor = std::vector<Matrix<int>>();
   std::vector<Matrix<int>> first_subspace_index_tensor =
@@ -195,7 +214,8 @@ ffi::Error _get_interferometer_on_fock_space_bwd_impl(
       totalSize / lastDim, lastDim, &(interferometer.typed_data()[0]));
   int c_idx = 0;
   int c_sqrt_idx = 0;
-  for (int i = 2; i < totalSize_y_dim; i++) {
+  for (int i = 2; i < totalSize_y_dim; i++)
+  {
     size_t si_size = y_dim.typed_data()[i] * interferometerc.rows;
     size_t fni_size = y_dim.typed_data()[i];
     size_t fsi_size = y_dim.typed_data()[i];
@@ -240,7 +260,8 @@ ffi::Error _get_interferometer_on_fock_space_bwd_impl(
       std::vector<Matrix<std::complex<double>>>();
   auto [total_size, n] = GetDims(y_dim);
   std::vector<int> y_dims_vec(y_dim.typed_data(), y_dim.typed_data() + n);
-  for (int d : y_dims_vec) {
+  for (int d : y_dims_vec)
+  {
     Matrix<std::complex<double>> subspace_m =
         Matrix<std::complex<double>>(d, d, &(y.typed_data()[result_start_idx]));
     subspace_representations.push_back(subspace_m);
@@ -255,8 +276,10 @@ ffi::Error _get_interferometer_on_fock_space_bwd_impl(
   Matrix<std::complex<double>> full_kl_grad =
       Matrix<std::complex<double>>(interferometerc.rows, interferometerc.cols);
   full_kl_grad.zeros();
-  for (int row_index = 0; row_index < d; row_index++) {
-    for (int col_index = 0; col_index < d; col_index++) {
+  for (int row_index = 0; row_index < d; row_index++)
+  {
+    for (int col_index = 0; col_index < d; col_index++)
+    {
       Matrix<std::complex<double>> second_subspace_grad =
           Matrix<std::complex<double>>(interferometerc.rows,
                                        interferometerc.cols);
@@ -264,7 +287,8 @@ ffi::Error _get_interferometer_on_fock_space_bwd_impl(
       second_subspace_grad(row_index, col_index) = 1.0;
       Matrix<std::complex<double>> previous_subspace_grad =
           second_subspace_grad;
-      for (int p = 2; p < cutoff; p++) {
+      for (int p = 2; p < cutoff; p++)
+      {
         Matrix<std::complex<double>> previous_subspace_representation =
             subspace_representations[p - 1];
         Matrix<int> subspace_indices = subspace_index_tensor[p - 2];
@@ -287,7 +311,8 @@ ffi::Error _get_interferometer_on_fock_space_bwd_impl(
   }
   full_kl_grad.add(upstream[1]);
   // convert result to buffer
-  for (size_t i = 0; i < full_kl_grad.size(); i++) {
+  for (size_t i = 0; i < full_kl_grad.size(); i++)
+  {
     result->typed_data()[i] = full_kl_grad[i];
   }
   return ffi::Error::Success();
@@ -306,7 +331,9 @@ XLA_FFI_DEFINE_HANDLER_SYMBOL(_get_interferometer_on_fock_space_bwd,
                                   .Arg<ffi::Buffer<ffi::C128>>()
                                   .Ret<ffi::Buffer<ffi::C128>>());
 
-template <typename T> py::capsule EncapsulateFfiCall(T *fn) {
+template <typename T>
+py::capsule EncapsulateFfiCall(T *fn)
+{
   // This check is optional, but it can be helpful for avoiding invalid
   // handlers.
   static_assert(std::is_invocable_r_v<XLA_FFI_Error *, T, XLA_FFI_CallFrame *>,

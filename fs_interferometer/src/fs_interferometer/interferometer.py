@@ -42,7 +42,7 @@ def total_helper_sqrt_size(interferometer, cutoff):
     return sum * (1 + d)
 
 
-def _get_interferometer_on_fock_space_xla(cutoff, d, interferometer):
+def calc_fs_interferometer(cutoff, d, interferometer):
     if cutoff[0] < 2:
         raise Exception("Cutoff has to be at least 2", str(cutoff[0]))
 
@@ -64,7 +64,7 @@ def _get_interferometer_on_fock_space_xla(cutoff, d, interferometer):
         )(cutoff, d, interferometer)
 
     return jax.lax.platform_dependent(
-        cpu=impl("_get_interferometer_on_fock_space_xla"),
+        cpu=impl("fs_interferometer_cpu"),
         cuda=impl("fs_interferometer"),
     )
 
