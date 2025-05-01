@@ -14,11 +14,17 @@ fs_interferometer_kernel(unsigned long *cutoff_, unsigned long *d_,
                          cuda::std::complex<double> *interferometer_,
                          cuda::std::complex<double> *y)
 {
-  size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-  const size_t grid_stride = blockDim.x * gridDim.x;
-  // calc_helper
   unsigned long cutoff = *cutoff_;
   unsigned long d = *d_;
+
+  y[0] = cuda::std::complex<double>(1.0, 0.0);
+  int result_size = 1;
+
+  for (int i = 0; i < d * d; i++)
+  {
+    y[result_size] = interferometer_[i];
+    result_size++;
+  }
 
   int size = binomialCoeff(d + cutoff - 1, d);
   Matrix<int> space = Matrix<int>(size, d);
@@ -27,17 +33,14 @@ fs_interferometer_kernel(unsigned long *cutoff_, unsigned long *d_,
   {
     int num_rows = symmetric_subspace_cardinality(d, n);
     Matrix<int> out = space.rowsliceR(current_row, current_row + num_rows);
-    int a = out(0, 0);
     partitions(d, n, out);
     current_row += num_rows;
   }
-
   Matrix<int> basis = Matrix<int>(space.rows, d);
   Matrix<int> first_subpace_indices_space = Matrix<int>(1, space.rows);
   Matrix<double> sqrt_first_occupation_numbers = Matrix<double>(1, space.rows);
   Matrix<int> first_nonzero_space_index = Matrix<int>(1, space.rows);
   Matrix<double> sqrt_space = Matrix<double>(space.rows, space.cols);
-
   for (size_t i = 0; i < space.rows; i++)
   {
     Matrix<int> current_basis = space.rowidx(i);
@@ -57,29 +60,12 @@ fs_interferometer_kernel(unsigned long *cutoff_, unsigned long *d_,
       current_basis[j] += 1;
     }
   }
-  // helper prep
   Matrix<int> cutoffM = Matrix<int>(1, cutoff);
   cutoffM.iota(1);
   Matrix<int> indices = cutoff_fock_space_dim_array(cutoffM, d);
-  // interferometer prep
-  Matrix<cuda::std::complex<double>> first =
-      Matrix<cuda::std::complex<double>>(1, 1);
-
-  first(0, 0) = cuda::std::complex<double>(1.0, 0.0);
-
-  // buffer counters
-  y[0] = first.data[0];
-  int result_size = 1;
   Matrix<cuda::std::complex<double>> interferometer =
       Matrix<cuda::std::complex<double>>(d, d, interferometer_);
-  for (int i = 0; i < interferometer.size(); i++)
-  {
-    y[result_size] = interferometer.data[i];
-    result_size++;
-  }
   Matrix<cuda::std::complex<double>> previous_representation = interferometer;
-
-  //  main loop
   for (size_t n = 2; n < cutoff; n++)
   {
     Matrix<int> subspace_range = Matrix<int>(1, indices[n] - indices[n - 1]);
@@ -93,11 +79,9 @@ fs_interferometer_kernel(unsigned long *cutoff_, unsigned long *d_,
     Matrix<double> sqrt_occupation_numbers = (*sqrt_space[subspace_range]);
     Matrix<double> sqrt_first_occupation_numbers_indexed =
         (*sqrt_first_occupation_numbers[subspace_range]);
-
     Matrix<cuda::std::complex<double>> representation =
         Matrix<cuda::std::complex<double>>(first_nonzero_indices.cols,
                                            sqrt_occupation_numbers.rows);
-
     for (size_t k = 0; k < first_nonzero_indices.cols; k++)
     {
       cuda::std::complex<double> denominator =
@@ -121,6 +105,7 @@ fs_interferometer_kernel(unsigned long *cutoff_, unsigned long *d_,
       y[result_size] = representation.data[i];
       result_size++;
     }
+    previous_representation = representation;
   }
 }
 
@@ -224,12 +209,11 @@ __global__ void fs_interferometer_fwd_kernel(
   first(0, 0) = cuda::std::complex<double>(1.0, 0.0);
 
   y_dims[0] = 1;
-  y_dims[1] = d;
-  // buffer counters
-  y[0] = first.data[0];
+  y[0] = cuda::std::complex<double>(1.0, 0.0);
   int result_size = 1;
   int helper_idx_size = 0;
   int helper_sqrt_size = 0;
+  y_dims[1] = d;
   Matrix<cuda::std::complex<double>> interferometer =
       Matrix<cuda::std::complex<double>>(d, d, interferometer_);
   for (int i = 0; i < interferometer.size(); i++)
@@ -238,8 +222,6 @@ __global__ void fs_interferometer_fwd_kernel(
     result_size++;
   }
   Matrix<cuda::std::complex<double>> previous_representation = interferometer;
-
-  //  main loop
   for (size_t n = 2; n < cutoff; n++)
   {
     Matrix<int> subspace_range = Matrix<int>(1, indices[n] - indices[n - 1]);
@@ -253,12 +235,10 @@ __global__ void fs_interferometer_fwd_kernel(
     Matrix<double> sqrt_occupation_numbers = (*sqrt_space[subspace_range]);
     Matrix<double> sqrt_first_occupation_numbers_indexed =
         (*sqrt_first_occupation_numbers[subspace_range]);
-
     Matrix<cuda::std::complex<double>> representation =
         Matrix<cuda::std::complex<double>>(first_nonzero_indices.cols,
                                            sqrt_occupation_numbers.rows);
     y_dims[n] = first_nonzero_indices.cols;
-
     for (size_t k = 0; k < first_nonzero_indices.cols; k++)
     {
       cuda::std::complex<double> denominator =
@@ -285,9 +265,7 @@ __global__ void fs_interferometer_fwd_kernel(
     for (int i = 0; i < subspace_indices.size(); i++)
     {
       helper_idx[helper_idx_size] = subspace_indices[i];
-      helper_sqrt[helper_sqrt_size] = sqrt_occupation_numbers[i];
       helper_idx_size++;
-      helper_sqrt_size++;
     }
     for (int i = 0; i < first_nonzero_indices.size(); i++)
     {
@@ -299,11 +277,17 @@ __global__ void fs_interferometer_fwd_kernel(
       helper_idx[helper_idx_size] = first_subspace_indices[i];
       helper_idx_size++;
     }
+    for (int i = 0; i < sqrt_occupation_numbers.size(); i++)
+    {
+      helper_sqrt[helper_sqrt_size] = sqrt_occupation_numbers[i];
+      helper_sqrt_size++;
+    }
     for (int i = 0; i < sqrt_first_occupation_numbers_indexed.size(); i++)
     {
       helper_sqrt[helper_sqrt_size] = sqrt_first_occupation_numbers_indexed[i];
       helper_sqrt_size++;
     }
+    previous_representation = representation;
   }
 }
 
