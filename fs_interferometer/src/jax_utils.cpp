@@ -43,8 +43,7 @@ std::pair<size_t, size_t> GetDims(const ffi::Buffer<T> &buffer) {
 
 ffi::Error _get_interferometer_on_fock_space_Impl(
     ffi ::Buffer<ffi::U64> cutoff, ffi::Buffer<ffi::U64> d_,
-    ffi::Buffer<ffi::C128> interferometer, ffi::ResultBuffer<ffi::C128> y,
-    ffi::ResultBuffer<ffi::U64> y_dims) {
+    ffi::Buffer<ffi::C128> interferometer, ffi::ResultBuffer<ffi::C128> y) {
   int d = d_.typed_data()[0];
   Matrix<std::complex<double>> interferometerc =
       Matrix<std::complex<double>>(d, d, &(interferometer.typed_data()[0]));
@@ -57,9 +56,6 @@ ffi::Error _get_interferometer_on_fock_space_Impl(
   for (size_t i = 0; i < res.size(); i++) {
     y->typed_data()[i] = res[i];
   }
-  for (int i = 0; i < cutoff.typed_data()[0]; i++) {
-    y_dims->typed_data()[i] = dims[i];
-  }
   return ffi::Error::Success();
 }
 
@@ -69,8 +65,7 @@ XLA_FFI_DEFINE_HANDLER_SYMBOL(_get_interferometer_on_fock_space_xla,
                                   .Arg<ffi::Buffer<ffi::U64>>()
                                   .Arg<ffi::Buffer<ffi::U64>>()
                                   .Arg<ffi::Buffer<ffi::C128>>()
-                                  .Ret<ffi::Buffer<ffi::C128>>()
-                                  .Ret<ffi::Buffer<ffi::U64>>());
+                                  .Ret<ffi::Buffer<ffi::C128>>());
 ffi::Error _get_interferometer_on_fock_space_fwd_impl(
     ffi::Buffer<ffi::U64> cutoff, ffi::Buffer<ffi::U64> d,
     ffi::Buffer<ffi::C128> interferometer, ffi::ResultBuffer<ffi::C128> y,
