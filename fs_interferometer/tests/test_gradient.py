@@ -5,7 +5,7 @@ from validators import validate_backward
 import numpy as np
 import jax
 
-#jax.config.update("jax_platform_name", "gpu")
+jax.config.update("jax_platform_name", "cpu")
 
 
 def test_backward_2_3_ones():

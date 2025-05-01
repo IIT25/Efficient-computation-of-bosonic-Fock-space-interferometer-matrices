@@ -1,7 +1,6 @@
 #include "cuda_helpers.cc.cu"
 #include "kernels.h"
 #include "matrix.hpp"
-#include <chrono>
 #include <complex>
 #include <cstdint>
 #include <cstdio>
@@ -117,36 +116,19 @@ ffi::Error fs_interferometer_host(cudaStream_t stream,
 {
   const int block_dim = 1;
   const int grid_dim = 1;
-  using std::chrono::duration;
-  using std::chrono::duration_cast;
-  using std::chrono::high_resolution_clock;
-  using std::chrono::milliseconds;
-  cudaEvent_t start, stop;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  auto t1 = high_resolution_clock::now();
-  cudaEventRecord(start);
   fs_interferometer_kernel<<<grid_dim, block_dim, /*shared_mem=*/0,
                              stream>>>(
       cutoff.typed_data(), d.typed_data(),
       reinterpret_cast<cuda::std::complex<double> *>(
           interferometer.typed_data()),
       reinterpret_cast<cuda::std::complex<double> *>(y->typed_data()));
-  cudaEventRecord(stop);
-  cudaEventSynchronize(stop);
-  float millisecond = 0;
-  cudaEventElapsedTime(&millisecond, start, stop);
-  std::cout << "Time taken by function cuda: " << millisecond << " ms"
-            << std::endl;
+
   cudaError_t last_error = cudaGetLastError();
   if (last_error != cudaSuccess)
   {
     return ffi::Error::Internal(std::string("CUDA error: ") +
                                 cudaGetErrorString(last_error));
   }
-  auto t2 = high_resolution_clock::now();
-  auto duratio = duration_cast<milliseconds>(t2 - t1).count();
-  std::cout << "Time taken by function: " << duratio << " ms" << std::endl;
   return ffi::Error::Success();
 }
 
@@ -299,15 +281,6 @@ ffi::Error fs_interferometer_fwd_host(
 {
   const int block_dim = 1;
   const int grid_dim = 1;
-  using std::chrono::duration;
-  using std::chrono::duration_cast;
-  using std::chrono::high_resolution_clock;
-  using std::chrono::milliseconds;
-  cudaEvent_t start, stop;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  auto t1 = high_resolution_clock::now();
-  cudaEventRecord(start);
   cudaMemset(y_dims->typed_data(), 0, 7 * sizeof(unsigned long));
   fs_interferometer_fwd_kernel<<<grid_dim, block_dim, /*shared_mem=*/0,
                                  stream>>>(
@@ -318,21 +291,12 @@ ffi::Error fs_interferometer_fwd_host(
       reinterpret_cast<unsigned long *>(y_dims->typed_data()),
       reinterpret_cast<int *>(helper_idx->typed_data()),
       reinterpret_cast<double *>(helper_sqrt->typed_data()));
-  cudaEventRecord(stop);
-  cudaEventSynchronize(stop);
-  float millisecond = 0;
-  cudaEventElapsedTime(&millisecond, start, stop);
-  std::cout << "Time taken by function cuda: " << millisecond << " ms"
-            << std::endl;
   cudaError_t last_error = cudaGetLastError();
   if (last_error != cudaSuccess)
   {
     return ffi::Error::Internal(std::string("CUDA error: ") +
                                 cudaGetErrorString(last_error));
   }
-  auto t2 = high_resolution_clock::now();
-  auto duratio = duration_cast<milliseconds>(t2 - t1).count();
-  std::cout << "Time taken by function: " << duratio << " ms" << std::endl;
   return ffi::Error::Success();
 }
 

@@ -5,7 +5,7 @@ from fs_interferometer import _get_interferometer_on_fock_space_xla
 from validators import validate_forward
 import jax
 
-#jax.config.update("jax_platform_name", "gpu")
+jax.config.update("jax_platform_name", "cpu")
 
 
 def test_forward_1_4():
