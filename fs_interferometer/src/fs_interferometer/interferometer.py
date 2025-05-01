@@ -107,7 +107,7 @@ def _get_interferometer_on_fock_space_bwd(
 
     return jax.lax.platform_dependent(
         cpu=impl("_get_interferometer_on_fock_space_bwd"),
-        cuda=impl("calc_fs_interferometer_bwd"),
+        cuda=impl("fs_interferometer_bwd"),
     )
 
 

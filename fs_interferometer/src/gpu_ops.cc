@@ -27,7 +27,7 @@ XLA_FFI_DEFINE_HANDLER_SYMBOL(
     {xla::ffi::Traits::kCmdBufferCompatible}); // cudaGraph enabled
 
 XLA_FFI_DEFINE_HANDLER_SYMBOL(
-    calc_fs_interferometer_bwd, calc_fs_interferometer_bwd_host,
+    fs_interferometer_bwd, fs_interferometer_bwd_host,
     ffi::Ffi::Bind()
         .Ctx<ffi::PlatformStream<cudaStream_t>>() // stream
         .Arg<ffi::Buffer<ffi::U64>>()
@@ -41,14 +41,17 @@ XLA_FFI_DEFINE_HANDLER_SYMBOL(
         .Ret<ffi::Buffer<ffi::C128>>(),
     {xla::ffi::Traits::kCmdBufferCompatible}); // cudaGraph enabled
 
-template <typename T> py::capsule EncapsulateFfiHandler(T *fn) {
-  static_assert(std::is_invocable_r_v<XLA_FFI_Error *, T, XLA_FFI_CallFrame *>,
-                "Encapsulated function must be and XLA FFI handler");
-  return py::capsule(reinterpret_cast<void *>(fn));
+template <typename T>
+py::capsule EncapsulateFfiHandler(T *fn)
+{
+    static_assert(std::is_invocable_r_v<XLA_FFI_Error *, T, XLA_FFI_CallFrame *>,
+                  "Encapsulated function must be and XLA FFI handler");
+    return py::capsule(reinterpret_cast<void *>(fn));
 }
 
-PYBIND11_MODULE(gpu_ops, m) {
-  m.doc() = R"pbdoc(
+PYBIND11_MODULE(gpu_ops, m)
+{
+    m.doc() = R"pbdoc(
           fs_interferometeranent calculator plugin
           -----------------------
   
@@ -59,15 +62,15 @@ PYBIND11_MODULE(gpu_ops, m) {
   
              fs_interferometeranent
       )pbdoc";
-  m.def("foo", []() {
+    m.def("foo", []()
+          {
     py::dict registrations;
     registrations["fs_interferometer"] =
         EncapsulateFfiHandler(fs_interferometer);
     registrations["fs_interferometer_fwd"] =
         EncapsulateFfiHandler(fs_interferometer_fwd);
-    registrations["calc_fs_interferometer_bwd"] =
-        EncapsulateFfiHandler(calc_fs_interferometer_bwd);
-    return registrations;
-  });
-  m.attr("__version__") = "dev";
+    registrations["fs_interferometer_bwd"] =
+        EncapsulateFfiHandler(fs_interferometer_bwd);
+    return registrations; });
+    m.attr("__version__") = "dev";
 }
