@@ -13,12 +13,13 @@ try:
 except ImportError:
     pass
 
-from .interferometer import fs_interferometer_grad, calc_fs_interferometer, total_size
+from .interferometer import fs_interferometer_grad, calc_fs_interferometer, total_size, _get_interferometer_on_fock_space_fwd
 
 __all__ = [
     "__doc__",
     "__version__",
     "calc_fs_interferometer",
+    "_get_interferometer_on_fock_space_fwd",
     "total_size",
     "get_fock_space_basis",
     "fs_interferometer_grad",

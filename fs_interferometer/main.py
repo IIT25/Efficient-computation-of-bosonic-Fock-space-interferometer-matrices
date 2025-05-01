@@ -1,5 +1,6 @@
 from read_utils import read_file, write_pickle
-from cpu_test import  interferometer,_get_interferometer_on_fock_space_fwd, _get_interferometer_on_fock_space_bwd
+from fs_interferometer import _get_interferometer_on_fock_space_fwd
+from fs_interferometer import fs_interferometer_grad
 import tkinter as tk
 from tkinter import ttk
 import tkinter.font
@@ -129,6 +130,7 @@ def show_result_fields():
         interferometer_path = e3.get()
         interferometer = read_file(interferometer_path)
         d = np.array([len(interferometer)], dtype=np.uint64)
+        print(interferometer)
     except:
          open_popup("interferometer file name: " + str(e3.get()))
          return
@@ -140,7 +142,7 @@ def show_result_fields():
          upstream = read_file(upstream_path)
          resj, dimsj, helper_idxj, helper_sqrtj = _get_interferometer_on_fock_space_fwd(cutoff, d, interferometer)
          
-         backward = _get_interferometer_on_fock_space_bwd(cutoff, interferometer,  d, resj, dimsj, helper_idxj, helper_sqrtj, upstream)
+         backward = fs_interferometer_grad(cutoff, d, interferometer, upstream)
          
     else:
          resj, dimsj, helper_idxj, helper_sqrtj = _get_interferometer_on_fock_space_fwd(cutoff, d, interferometer)

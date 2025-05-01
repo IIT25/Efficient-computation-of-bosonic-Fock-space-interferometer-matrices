@@ -112,17 +112,6 @@ def _get_interferometer_on_fock_space_bwd(
 
 
 def fs_interferometer_grad(cutoff, d, interferometer, upstream):
-    if cutoff[0] < 2:
-        raise Exception("Cutoff has to be at least 2", str(cutoff[0]))
-    if interferometer.shape[0] != interferometer.shape[1]:
-        raise Exception(
-            "Interferometer has to be a square matrix",
-            str(interferometer.shape[0]) + " x " + str(interferometer.shape[1]),
-        )
-    if interferometer.shape[0] != d:
-        raise Exception(
-            "d has to be equal to the dimensions of interferometer", str(d[0])
-        )
     resj, dimsj, helper_idxj, helper_sqrtj = _get_interferometer_on_fock_space_fwd(
         cutoff, d, interferometer
     )
