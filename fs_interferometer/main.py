@@ -138,6 +138,7 @@ def show_result_fields():
     
     
     if bwd:
+         print(created_inputs)
          upstream_path = created_inputs[1].get()
          upstream = read_file(upstream_path)
          resj, dimsj, helper_idxj, helper_sqrtj = _get_interferometer_on_fock_space_fwd(cutoff, d, interferometer)
